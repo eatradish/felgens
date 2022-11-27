@@ -8,7 +8,7 @@ Bilibili live danmu websocket library
 
 ```rust
 use anyhow::Result;
-use bililive::{ws_socket_object, WsStreamMessageType};
+use felgens::{ws_socket_object, WsStreamMessageType};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 #[tokio::main]
