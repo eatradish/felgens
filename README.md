@@ -3,7 +3,7 @@ Bilibili live danmu websocket library
 
 ## Usage
 
-```
+```rust
 use anyhow::Result;
 use bililive::{ws_socket_object, WsStreamMessageType};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
