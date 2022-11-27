@@ -32,9 +32,10 @@ fn print_danmu_msg(msg: DanmuMessage) {
 
     let fl = if let Some(fl) = msg.fan_level {
         s.push_str(&format!(
-            "[{}({})]: ",
+            "[{}({})] {}: ",
             msg.fan.unwrap_or("".to_string()),
-            fl
+            fl,
+            msg.username
         ));
 
         fl

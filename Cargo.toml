@@ -1,5 +1,5 @@
 [package]
-name = "bililive"
+name = "felgens"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,7 +13,6 @@ serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.19", features = ["macros", "rt", "rt-multi-thread", "io-util", "io-std", "time"] }
 tokio-tungstenite = { version = "0.17", features = ["connect", "native-tls"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
-fancy-regex = "0.10"
 scroll = "0.11"
 scroll_derive = "0.11"
 reqwest = { version = "0.11", features = ["json"] }
