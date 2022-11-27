@@ -119,6 +119,7 @@ pub async fn ws_socket_str(
 
 async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> {
     let client = HttpClient::new()?;
+    let roomid = client.get_room_id(roomid).await?;
     let dammu_info = client.get_dammu_info(roomid).await?.data;
     let key = dammu_info.token;
     let host_list = dammu_info.host_list;

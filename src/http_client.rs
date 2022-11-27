@@ -25,6 +25,16 @@ pub struct WsHost {
     pub host: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RoomInit {
+    data: RoomInitData,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RoomInitData {
+    room_id: u64,
+}
+
 impl HttpClient {
     pub fn new() -> Result<Self> {
         Ok(Self {
@@ -62,6 +72,26 @@ impl HttpClient {
             .await?
             .json::<DanmuInfo>()
             .await?;
+
+        Ok(resp)
+    }
+
+    pub async fn get_room_id(&self, room_id: u64) -> Result<u64> {
+        if room_id > 1000 {
+            return Ok(room_id);
+        }
+
+        let resp = self
+            .get(
+                &format!("room/v1/Room/room_init?id={}?&from=room", room_id),
+                None,
+                None,
+            )
+            .await?
+            .json::<RoomInit>()
+            .await?
+            .data
+            .room_id;
 
         Ok(resp)
     }
