@@ -1,6 +1,9 @@
 # bililive-rs
 Bilibili live danmu websocket library
 
+[![asciicast](https://asciinema.org/a/FSB5xpwPUcTGz3Z7K2kfCrSNQ.png)](https://asciinema.org/a/FSB5xpwPUcTGz3Z7K2kfCrSNQ)
+
+
 ## Usage
 
 ```rust
