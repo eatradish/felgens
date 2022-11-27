@@ -1,5 +1,5 @@
 use anyhow::Result;
-use bililive::{ws_socket_object, DanmuMessage, SuperChatMessage, WsStreamMessageType};
+use felgens::{ws_socket_object, DanmuMessage, SuperChatMessage, WsStreamMessageType};
 use owo_colors::OwoColorize;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
