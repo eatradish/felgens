@@ -76,18 +76,11 @@ pub enum WsStreamMessageType {
 
 impl WsStreamCtx {
     pub fn new(s: &str) -> Result<Self> {
-        match serde_json::from_str(&s) {
-            Ok(v) => Ok(v),
-            Err(e) => {
-                dbg!(s);
-
-                return Err(anyhow!(e));
-            }
-        }
+        Ok(serde_json::from_str(s)?)
     }
 
     pub fn match_msg(&self) -> Result<WsStreamMessageType> {
-        let result = match self.cmd.as_ref().map(|x| x.as_str()) {
+        let result = match self.cmd.as_deref() {
             Some("DANMU_MSG") => WsStreamMessageType::DanmuMsg(self.danmu_msg()?),
             Some("SUPER_CHAT_MESSAGE") => WsStreamMessageType::SuperChatMessage(self.super_chat()?),
             Some(_) => return Err(anyhow!("unknown msg")),

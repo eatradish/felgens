@@ -48,7 +48,7 @@ pub fn encode(s: &str, op: u8) -> Result<Vec<u8>> {
 
     let header = write_int(&header, 0, packet_len as u32)?;
 
-    return Ok([&header, data].concat());
+    Ok([&header, data].concat())
 }
 
 pub fn build_pack(buf: &[u8]) -> Result<Vec<String>> {

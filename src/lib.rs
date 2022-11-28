@@ -66,7 +66,7 @@ pub async fn ws_socket_object(
         while let Ok(Some(msg)) = read.try_next().await {
             let data = msg.into_data();
 
-            if data.len() > 0 {
+            if !data.is_empty() {
                 let s = build_pack(&data);
 
                 if let Ok(msgs) = s {
@@ -98,7 +98,7 @@ pub async fn ws_socket_str(
             // dbg!(&msg);
             let data = msg.into_data();
 
-            if data.len() > 0 {
+            if !data.is_empty() {
                 // let data = pack(&data).unwrap();
 
                 let s = build_pack(&data);
