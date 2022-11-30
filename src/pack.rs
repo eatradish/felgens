@@ -8,10 +8,10 @@ use scroll_derive::Pread;
 #[derive(Debug, Pread, Clone)]
 struct BilibiliPackHeader {
     pack_len: u32,
-    header_len: u16,
+    _header_len: u16,
     ver: u16,
-    op: u32,
-    seq: u32,
+    _op: u32,
+    _seq: u32,
 }
 
 #[derive(Debug, Pread)]

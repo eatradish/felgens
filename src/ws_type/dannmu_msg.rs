@@ -1,4 +1,4 @@
-use crate::WsStreamCtx;
+use super::{util::trans_err, WsStreamCtx};
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
 
@@ -70,7 +70,7 @@ impl DanmuMessage {
             .as_u64()
             .ok_or_else(|| trans_err("trans_err", 4))?;
 
-        Ok(DanmuMessage {
+        Ok(Self {
             uid,
             username,
             msg,
@@ -79,8 +79,4 @@ impl DanmuMessage {
             timestamp,
         })
     }
-}
-
-fn trans_err(name: &str, step: u32) -> anyhow::Error {
-    anyhow!("Can not get {} step {}", name, step)
 }

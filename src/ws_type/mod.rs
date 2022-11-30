@@ -1,6 +1,7 @@
 mod dannmu_msg;
 mod interact_word;
 mod super_chat;
+mod util;
 
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
@@ -13,7 +14,7 @@ pub use self::super_chat::SuperChatMessage;
 #[derive(Debug, Deserialize)]
 pub struct WsStreamCtx {
     cmd: Option<String>,
-    info: Option<Vec<serde_json::Value>>,
+    info: Option<Vec<Value>>,
     data: Option<WsStreamCtxData>,
 }
 
@@ -69,25 +70,17 @@ impl WsStreamCtx {
 
     pub fn match_msg(&self) -> Result<WsStreamMessageType> {
         let result = match self.cmd.as_deref() {
-            Some("DANMU_MSG") => WsStreamMessageType::DanmuMsg(self.danmu_msg()?),
-            Some("SUPER_CHAT_MESSAGE") => WsStreamMessageType::SuperChatMessage(self.super_chat()?),
-            Some("INTERACT_WORD") => WsStreamMessageType::InteractWord(self.interact_word()?),
+            Some("DANMU_MSG") => WsStreamMessageType::DanmuMsg(DanmuMessage::new_from_ctx(self)?),
+            Some("SUPER_CHAT_MESSAGE") => {
+                WsStreamMessageType::SuperChatMessage(SuperChatMessage::new_from_ctx(self)?)
+            }
+            Some("INTERACT_WORD") => {
+                WsStreamMessageType::InteractWord(InteractWord::new_from_ctx(self)?)
+            }
             Some(_) => return Err(anyhow!("unknown msg")),
             None => return Err(anyhow!("unknown msg")),
         };
 
         Ok(result)
-    }
-
-    pub fn danmu_msg(&self) -> Result<DanmuMessage> {
-        DanmuMessage::new_from_ctx(self)
-    }
-
-    pub fn super_chat(&self) -> Result<SuperChatMessage> {
-        SuperChatMessage::new_from_ctx(self)
-    }
-
-    pub fn interact_word(&self) -> Result<InteractWord> {
-        InteractWord::new_from_ctx(self)
     }
 }
