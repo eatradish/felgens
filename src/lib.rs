@@ -7,7 +7,8 @@ use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 pub use ws_type::{WsStreamMessageType, DanmuMessage, SuperChatMessage, InteractWord};
 
-use crate::{http_client::HttpClient, pack::build_pack, ws_type::WsStreamCtx};
+use crate::{http_client::HttpClient, pack::build_pack};
+use ws_type::WsStreamCtx;
 
 mod http_client;
 mod pack;
