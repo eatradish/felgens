@@ -33,3 +33,11 @@ async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> Result<()> {
 }
 ```
 Or run `cargo run --example danmu`
+
+## To-do!
+
+- [x] 弹幕
+- [x] SC
+- [x] xxx 进了该房间
+- [ ] 礼物
+- [ ] 红包
