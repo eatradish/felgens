@@ -1,5 +1,5 @@
 use anyhow::Result;
-use felgens::{ws_socket_object, DanmuMessage, SuperChatMessage, WsStreamMessageType};
+use felgens::{ws_socket_object, DanmuMessage, SuperChatMessage, WsStreamMessageType, InteractWord};
 use owo_colors::OwoColorize;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
@@ -9,7 +9,7 @@ async fn main() {
 
     // 关注艾露露 (https://live.bilibili.com/22746343) 瞄！
 
-    let ws = ws_socket_object(tx, 22746343);
+    let ws = ws_socket_object(tx, 4726132);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);
@@ -21,6 +21,7 @@ async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> Result<()> {
         match msg {
             WsStreamMessageType::DanmuMsg(msg) => print_danmu_msg(msg),
             WsStreamMessageType::SuperChatMessage(msg) => print_sc(msg),
+            WsStreamMessageType::InteractWord(msg) => print_interact_word(msg),
         }
     }
 
@@ -63,4 +64,8 @@ fn print_danmu_msg(msg: DanmuMessage) {
 
 fn print_sc(msg: SuperChatMessage) {
     println!("{} SC ({}): {}", msg.uname, msg.price, msg.msg);
+}
+
+fn print_interact_word(msg: InteractWord) {
+    println!("{} 进入了直播间", msg.uname);
 }

@@ -28,6 +28,7 @@ pub struct WsStreamCtxData {
     uid: Option<Value>,
     user_info: Option<WsStreamCtxDataUser>,
     medal_info: Option<WsStreamCtxDataMedalInfo>,
+    uname: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -56,6 +57,12 @@ pub struct SuperChatMessage {
 }
 
 #[derive(Debug)]
+pub struct InteractWord {
+    pub uid: u64,
+    pub uname: String,
+}
+
+#[derive(Debug)]
 pub enum WsStreamMessageType {
     DanmuMsg(DanmuMessage),
     // WELCOME_GUARD,
@@ -63,6 +70,7 @@ pub enum WsStreamMessageType {
     // WELCOME,
     // SUPER_CHAT_MESSAGE_JPN,
     SuperChatMessage(SuperChatMessage),
+    InteractWord(InteractWord),
     // SEND_GIFT,
     // COMBO_SEND,
     // ANCHOR_LOT_START,
@@ -83,6 +91,7 @@ impl WsStreamCtx {
         let result = match self.cmd.as_deref() {
             Some("DANMU_MSG") => WsStreamMessageType::DanmuMsg(self.danmu_msg()?),
             Some("SUPER_CHAT_MESSAGE") => WsStreamMessageType::SuperChatMessage(self.super_chat()?),
+            Some("INTERACT_WORD") => WsStreamMessageType::InteractWord(self.interact_word()?),
             Some(_) => return Err(anyhow!("unknown msg")),
             None => return Err(anyhow!("unknown msg")),
         };
@@ -213,6 +222,28 @@ impl WsStreamCtx {
             madel_name,
             madel_level,
         })
+    }
+
+    fn interact_word(&self) -> Result<InteractWord> {
+        let data = self
+            .data
+            .as_ref()
+            .ok_or_else(|| anyhow!("Not a interact word message!"))?;
+
+        let uname = data
+            .uname
+            .as_ref()
+            .ok_or_else(|| anyhow!("Can not get interact uname"))?
+            .to_string();
+
+        let uid = data
+            .uid
+            .as_ref()
+            .ok_or_else(|| anyhow!("uid doesn exist"))?
+            .as_u64()
+            .ok_or_else(|| anyhow!("Can not uid trans to u64"))?;
+
+        Ok(InteractWord { uid, uname })
     }
 }
 
