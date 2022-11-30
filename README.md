@@ -1,7 +1,7 @@
 # felgens
 Bilibili live danmu websocket library
 
-[![asciicast](https://asciinema.org/a/alyoM0UNpvotlLCInHsu3yMmR.png)](https://asciinema.org/a/alyoM0UNpvotlLCInHsu3yMmR)
+[![asciicast](https://asciinema.org/a/zQIlXtbOQCIzlghjDxpaBbcHJ.png)](https://asciinema.org/a/zQIlXtbOQCIzlghjDxpaBbcHJ)
 
 
 ## Usage
