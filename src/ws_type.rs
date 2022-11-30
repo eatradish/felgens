@@ -29,6 +29,7 @@ pub struct WsStreamCtxData {
     user_info: Option<WsStreamCtxDataUser>,
     medal_info: Option<WsStreamCtxDataMedalInfo>,
     uname: Option<String>,
+    fans_medal: Option<WsStreamCtxDataMedalInfo>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,6 +61,8 @@ pub struct SuperChatMessage {
 pub struct InteractWord {
     pub uid: u64,
     pub uname: String,
+    pub fan: Option<String>,
+    pub fan_level: Option<u32>,
 }
 
 #[derive(Debug)]
@@ -243,7 +246,31 @@ impl WsStreamCtx {
             .as_u64()
             .ok_or_else(|| anyhow!("Can not uid trans to u64"))?;
 
-        Ok(InteractWord { uid, uname })
+        let fan = data
+            .fans_medal
+            .as_ref()
+            .and_then(|x| x.medal_name.to_owned());
+
+        let fan = if fan == Some("".to_string()) {
+            None
+        } else {
+            fan
+        };
+
+        let fan_level = data.fans_medal.as_ref().and_then(|x| x.medal_level);
+
+        let fan_level = if fan_level == Some(0) {
+            None
+        } else {
+            fan_level
+        };
+
+        Ok(InteractWord {
+            uid,
+            uname,
+            fan,
+            fan_level,
+        })
     }
 }
 

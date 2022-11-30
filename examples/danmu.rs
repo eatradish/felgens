@@ -9,7 +9,7 @@ async fn main() {
 
     // 关注艾露露 (https://live.bilibili.com/22746343) 瞄！
 
-    let ws = ws_socket_object(tx, 4726132);
+    let ws = ws_socket_object(tx, 22746343);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);
@@ -67,5 +67,13 @@ fn print_sc(msg: SuperChatMessage) {
 }
 
 fn print_interact_word(msg: InteractWord) {
-    println!("{} 进入了直播间", msg.uname);
+    let mut s = String::new();
+
+    if let Some(fan) = msg.fan {
+        s.push_str(&format!("[{}({})] ", fan, msg.fan_level.expect("Should exist")));
+    }
+
+    s.push_str(&format!("{} 进入了直播间", msg.uname));
+
+    println!("{}", s);
 }
