@@ -1,5 +1,7 @@
 use anyhow::Result;
-use felgens::{ws_socket_object, DanmuMessage, SuperChatMessage, WsStreamMessageType, InteractWord};
+use felgens::{
+    ws_socket_object, DanmuMessage, InteractWord, SuperChatMessage, WsStreamMessageType,
+};
 use owo_colors::OwoColorize;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
@@ -70,7 +72,11 @@ fn print_interact_word(msg: InteractWord) {
     let mut s = String::new();
 
     if let Some(fan) = msg.fan {
-        s.push_str(&format!("[{}({})] ", fan, msg.fan_level.expect("Should exist")));
+        s.push_str(&format!(
+            "[{}({})] ",
+            fan,
+            msg.fan_level.expect("Should exist")
+        ));
     }
 
     s.push_str(&format!("{} 进入了直播间", msg.uname));

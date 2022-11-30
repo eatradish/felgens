@@ -1,14 +1,14 @@
 mod dannmu_msg;
-mod super_chat;
 mod interact_word;
+mod super_chat;
 
+use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use serde_json::Value;
-use anyhow::{Result, anyhow};
 
 pub use self::dannmu_msg::DanmuMessage;
-pub use self::super_chat::SuperChatMessage;
 pub use self::interact_word::InteractWord;
+pub use self::super_chat::SuperChatMessage;
 
 #[derive(Debug, Deserialize)]
 pub struct WsStreamCtx {

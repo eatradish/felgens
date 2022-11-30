@@ -1,9 +1,9 @@
 use std::io::Read;
 
+use anyhow::{anyhow, Result};
 use flate2::read::ZlibDecoder;
 use scroll::Pread;
 use scroll_derive::Pread;
-use anyhow::{Result, anyhow};
 
 #[derive(Debug, Pread, Clone)]
 struct BilibiliPackHeader {

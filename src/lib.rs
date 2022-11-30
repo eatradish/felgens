@@ -5,7 +5,7 @@ use futures_util::{Future, SinkExt, StreamExt, TryStreamExt};
 use serde::Serialize;
 use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
-pub use ws_type::{WsStreamMessageType, DanmuMessage, SuperChatMessage, InteractWord};
+pub use ws_type::{DanmuMessage, InteractWord, SuperChatMessage, WsStreamMessageType};
 
 use crate::{http_client::HttpClient, pack::build_pack};
 use ws_type::WsStreamCtx;
@@ -88,10 +88,7 @@ pub async fn ws_socket_object(
     Ok(())
 }
 
-pub async fn ws_socket_str(
-    tx: mpsc::UnboundedSender<String>,
-    roomid: u64,
-) -> Result<()> {
+pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64) -> Result<()> {
     let (mut read, timeout_worker) = prepare(roomid).await?;
 
     let recv = async {

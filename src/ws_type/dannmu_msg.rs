@@ -1,6 +1,6 @@
-use serde::Deserialize;
 use crate::WsStreamCtx;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct DanmuMessage {
