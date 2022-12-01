@@ -68,6 +68,18 @@ impl SendGift {
 
         let medal_level = data.medal_info.as_ref().and_then(|x| x.medal_level);
 
+        let medal_name = if medal_name == Some("".to_string()) {
+            None
+        } else {
+            medal_name
+        };
+
+        let medal_level = if medal_level == Some(0) {
+            None
+        } else {
+            medal_level
+        };
+
         let price = data
             .price
             .ok_or_else(|| anyhow!("Can not get price from gift message!"))?;

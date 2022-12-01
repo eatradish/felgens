@@ -91,7 +91,7 @@ fn print_send_gift(msg: SendGift) {
         write!(s, "[{}({})] ", fan, msg.medal_level.expect("Should exist")).unwrap();
     }
 
-    write!(s, "{}: {} x{}", msg.action, msg.gift_name, msg.num).unwrap();
+    write!(s, "{}: {} {}x{}", msg.uname, msg.action, msg.gift_name, msg.num).unwrap();
 
     println!("{}", s);
 }
