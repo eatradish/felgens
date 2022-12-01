@@ -1,8 +1,9 @@
 use anyhow::Result;
 use felgens::{
-    ws_socket_object, DanmuMessage, InteractWord, SuperChatMessage, SendGift, WsStreamMessageType,
+    ws_socket_object, DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType,
 };
 use owo_colors::OwoColorize;
+use std::fmt::Write;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 #[tokio::main]
@@ -35,16 +36,18 @@ fn print_danmu_msg(msg: DanmuMessage) {
     let mut s = String::new();
 
     let fl = if let Some(fl) = msg.fan_level {
-        s.push_str(&format!(
+        write!(
+            s,
             "[{}({})] {}: ",
-            msg.fan.unwrap_or("".to_string()),
+            msg.fan.unwrap_or_else(|| "".to_string()),
             fl,
             msg.username
-        ));
+        )
+        .unwrap();
 
         fl
     } else {
-        s.push_str(&format!("{}: ", msg.username));
+        write!(s, "{}: ", msg.username).unwrap();
 
         0
     };
@@ -73,14 +76,10 @@ fn print_interact_word(msg: InteractWord) {
     let mut s = String::new();
 
     if let Some(fan) = msg.fan {
-        s.push_str(&format!(
-            "[{}({})] ",
-            fan,
-            msg.fan_level.expect("Should exist")
-        ));
+        write!(s, "[{}({})] ", fan, msg.fan_level.expect("Should exist")).unwrap();
     }
 
-    s.push_str(&format!("{} 进入了直播间", msg.uname));
+    write!(s, "{} 进入了直播间", msg.uname).unwrap();
 
     println!("{}", s);
 }
@@ -89,14 +88,10 @@ fn print_send_gift(msg: SendGift) {
     let mut s = String::new();
 
     if let Some(fan) = msg.medal_name {
-        s.push_str(&format!(
-            "[{}({})] ",
-            fan,
-            msg.medal_level.expect("Should exist")
-        ));
+        write!(s, "[{}({})] ", fan, msg.medal_level.expect("Should exist")).unwrap();
     }
 
-    s.push_str(&format!("{}: {} x {}", msg.action, msg.gift_name, msg.num));
+    write!(s, "{}: {} x{}", msg.action, msg.gift_name, msg.num).unwrap();
 
     println!("{}", s);
 }

@@ -40,7 +40,7 @@ impl SendGift {
 
         let num = if let Some(num) = combo_send.clone().and_then(|x| x.combo_num) {
             num
-        } else if let Some(num) = combo_send.clone().and_then(|x| x.gift_num) {
+        } else if let Some(num) = combo_send.and_then(|x| x.gift_num) {
             num
         } else if let Some(num) = data.num {
             num

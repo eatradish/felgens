@@ -5,7 +5,7 @@ use futures_util::{Future, SinkExt, StreamExt, TryStreamExt};
 use serde::Serialize;
 use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
-pub use ws_type::{DanmuMessage, InteractWord, SuperChatMessage, WsStreamMessageType, SendGift};
+pub use ws_type::{DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType};
 
 use crate::{http_client::HttpClient, pack::build_pack};
 use ws_type::WsStreamCtx;
