@@ -1,6 +1,6 @@
 use anyhow::Result;
 use felgens::{
-    ws_socket_object, DanmuMessage, InteractWord, SuperChatMessage, WsStreamMessageType,
+    ws_socket_object, DanmuMessage, InteractWord, SuperChatMessage, SendGift, WsStreamMessageType,
 };
 use owo_colors::OwoColorize;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
@@ -11,7 +11,7 @@ async fn main() {
 
     // 关注艾露露 (https://live.bilibili.com/22746343) 瞄！
 
-    let ws = ws_socket_object(tx, 22571722);
+    let ws = ws_socket_object(tx, 22603245);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);
@@ -24,6 +24,7 @@ async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> Result<()> {
             WsStreamMessageType::DanmuMsg(msg) => print_danmu_msg(msg),
             WsStreamMessageType::SuperChatMessage(msg) => print_sc(msg),
             WsStreamMessageType::InteractWord(msg) => print_interact_word(msg),
+            WsStreamMessageType::SendGift(msg) => print_send_gift(msg),
         }
     }
 
@@ -80,6 +81,22 @@ fn print_interact_word(msg: InteractWord) {
     }
 
     s.push_str(&format!("{} 进入了直播间", msg.uname));
+
+    println!("{}", s);
+}
+
+fn print_send_gift(msg: SendGift) {
+    let mut s = String::new();
+
+    if let Some(fan) = msg.medal_name {
+        s.push_str(&format!(
+            "[{}({})] ",
+            fan,
+            msg.medal_level.expect("Should exist")
+        ));
+    }
+
+    s.push_str(&format!("{}: {} x {}", msg.action, msg.gift_name, msg.num));
 
     println!("{}", s);
 }

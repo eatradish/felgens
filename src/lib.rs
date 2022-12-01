@@ -5,7 +5,7 @@ use futures_util::{Future, SinkExt, StreamExt, TryStreamExt};
 use serde::Serialize;
 use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
-pub use ws_type::{DanmuMessage, InteractWord, SuperChatMessage, WsStreamMessageType};
+pub use ws_type::{DanmuMessage, InteractWord, SuperChatMessage, WsStreamMessageType, SendGift};
 
 use crate::{http_client::HttpClient, pack::build_pack};
 use ws_type::WsStreamCtx;
@@ -40,7 +40,7 @@ struct WsSend {
 /// async fn main() {
 ///     let (tx, rx) = mpsc::unbounded_channel();
 
-///     // bilibili live room id (true id): 22746343
+///     // bilibili live room id: 22746343
 
 ///     let ws = ws_socket_object(tx, 5424);
 

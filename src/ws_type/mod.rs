@@ -1,5 +1,6 @@
 mod dannmu_msg;
 mod interact_word;
+mod send_gift;
 mod super_chat;
 mod util;
 
@@ -9,6 +10,7 @@ use serde_json::Value;
 
 pub use self::dannmu_msg::DanmuMessage;
 pub use self::interact_word::InteractWord;
+pub use self::send_gift::SendGift;
 pub use self::super_chat::SuperChatMessage;
 
 #[derive(Debug, Deserialize)]
@@ -18,7 +20,7 @@ pub struct WsStreamCtx {
     data: Option<WsStreamCtxData>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct WsStreamCtxData {
     message: Option<String>,
     price: Option<u32>,
@@ -29,15 +31,22 @@ pub struct WsStreamCtxData {
     medal_info: Option<WsStreamCtxDataMedalInfo>,
     uname: Option<String>,
     fans_medal: Option<WsStreamCtxDataMedalInfo>,
+    action: Option<String>,
+    #[serde(rename = "giftName")]
+    gift_name: Option<String>,
+    num: Option<u64>,
+    combo_num: Option<u64>,
+    gift_num: Option<u64>,
+    combo_send: Box<Option<WsStreamCtxData>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct WsStreamCtxDataMedalInfo {
     medal_name: Option<String>,
     medal_level: Option<u32>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct WsStreamCtxDataUser {
     face: String,
     uname: String,
@@ -52,7 +61,7 @@ pub enum WsStreamMessageType {
     // SUPER_CHAT_MESSAGE_JPN,
     SuperChatMessage(SuperChatMessage),
     InteractWord(InteractWord),
-    // SEND_GIFT,
+    SendGift(SendGift),
     // COMBO_SEND,
     // ANCHOR_LOT_START,
     // ANCHOR_LOT_END,
@@ -69,7 +78,9 @@ impl WsStreamCtx {
     }
 
     pub fn match_msg(&self) -> Result<WsStreamMessageType> {
-        let result = match self.cmd.as_deref() {
+        let cmd = self.handle_cmd();
+
+        let result = match cmd {
             Some("DANMU_MSG") => WsStreamMessageType::DanmuMsg(DanmuMessage::new_from_ctx(self)?),
             Some("SUPER_CHAT_MESSAGE") => {
                 WsStreamMessageType::SuperChatMessage(SuperChatMessage::new_from_ctx(self)?)
@@ -77,10 +88,26 @@ impl WsStreamCtx {
             Some("INTERACT_WORD") => {
                 WsStreamMessageType::InteractWord(InteractWord::new_from_ctx(self)?)
             }
+            Some("SEND_GIFT") => WsStreamMessageType::SendGift(SendGift::new_from_ctx(self)?),
             Some(_) => return Err(anyhow!("unknown msg")),
             None => return Err(anyhow!("unknown msg")),
         };
 
         Ok(result)
+    }
+
+    fn handle_cmd(&self) -> Option<&str> {
+        // handle DANMU_MSG:4:0:2:2:2:0
+        let cmd = if let Some(c) = self.cmd.as_deref() {
+            if c.starts_with("DANMU_MSG") {
+                Some("DANMU_MSG")
+            } else {
+                Some(c)
+            }
+        } else {
+            None
+        };
+
+        cmd
     }
 }
