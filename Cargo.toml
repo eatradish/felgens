@@ -4,6 +4,9 @@ version = "0.2.0"
 edition = "2021"
 description = "Bilibili live danmu websocket library"
 license = "MIT"
+documentation = "https://docs.rs/felgens"
+homepage = "https://github.com/eatradish/felgens"
+repository = "https://github.com/eatradish/felgens"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
