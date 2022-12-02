@@ -88,7 +88,9 @@ impl WsStreamCtx {
             Some("INTERACT_WORD") => {
                 WsStreamMessageType::InteractWord(InteractWord::new_from_ctx(self)?)
             }
-            Some("SEND_GIFT") => WsStreamMessageType::SendGift(SendGift::new_from_ctx(self)?),
+            Some("SEND_GIFT") | Some("COMBO_SEND") => {
+                WsStreamMessageType::SendGift(SendGift::new_from_ctx(self)?)
+            }
             Some(_) => return Err(anyhow!("unknown msg")),
             None => return Err(anyhow!("unknown msg")),
         };

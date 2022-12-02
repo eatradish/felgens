@@ -20,7 +20,7 @@ impl SendGift {
         let data = ctx
             .data
             .as_ref()
-            .ok_or_else(|| anyhow!("NOt a Send Gift message!"))?;
+            .ok_or_else(|| anyhow!("Not a Send Gift message!"))?;
 
         let action = data
             .action
@@ -40,9 +40,9 @@ impl SendGift {
 
         let num = if let Some(num) = combo_send.clone().and_then(|x| x.combo_num) {
             num
-        } else if let Some(num) = combo_send.and_then(|x| x.gift_num) {
-            num
         } else if let Some(num) = data.num {
+            num
+        } else if let Some(num) = combo_send.and_then(|x| x.gift_num) {
             num
         } else {
             return Err(anyhow!("Can not get gift num!"));

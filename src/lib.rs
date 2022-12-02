@@ -7,6 +7,8 @@ use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 pub use ws_type::{DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType};
 
+use log::warn;
+
 use crate::{http_client::HttpClient, pack::build_pack};
 use ws_type::WsStreamCtx;
 
@@ -75,7 +77,9 @@ pub async fn ws_socket_object(
                         let ws = WsStreamCtx::new(&i).unwrap();
                         match ws.match_msg() {
                             Ok(v) => tx.send(v).unwrap(),
-                            Err(_) => continue,
+                            Err(_) => {
+                                warn!("This message parsing is not yet supported:\n{}", i);
+                            }
                         }
                     }
                 }

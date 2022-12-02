@@ -5,9 +5,15 @@ use felgens::{
 use owo_colors::OwoColorize;
 use std::fmt::Write;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .init();
+
     let (tx, rx) = mpsc::unbounded_channel();
 
     // 关注艾露露 (https://live.bilibili.com/22746343) 瞄！
@@ -91,7 +97,12 @@ fn print_send_gift(msg: SendGift) {
         write!(s, "[{}({})] ", fan, msg.medal_level.expect("Should exist")).unwrap();
     }
 
-    write!(s, "{}: {} {}x{}", msg.uname, msg.action, msg.gift_name, msg.num).unwrap();
+    write!(
+        s,
+        "{}: {}了{}x{}",
+        msg.uname, msg.action, msg.gift_name, msg.num
+    )
+    .unwrap();
 
     println!("{}", s);
 }
