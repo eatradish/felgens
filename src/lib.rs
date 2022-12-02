@@ -127,6 +127,8 @@ async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> 
     let host_list = dammu_info.host_list;
     let mut con = None;
 
+    debug!("ws host list: {:?}", host_list);
+
     for i in host_list {
         let host = format!("wss://{}/sub", i.host);
         if let Ok((c, _)) = connect_async(&host).await {
@@ -134,7 +136,7 @@ async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> 
             info!("Connected ws host: {}", host);
             break;
         } else {
-            warn!("Connect ws host: {} has error, try next host...", host);
+            warn!("Connect ws host: {} has error, trying next host ...", host);
         }
     }
 
