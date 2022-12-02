@@ -7,7 +7,7 @@ use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 pub use ws_type::{DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType};
 
-use log::warn;
+use log::{warn, info, debug};
 
 use crate::{http_client::HttpClient, pack::build_pack};
 use ws_type::WsStreamCtx;
@@ -131,13 +131,18 @@ async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> 
         let host = format!("wss://{}/sub", i.host);
         if let Ok((c, _)) = connect_async(&host).await {
             con = Some(c);
+            info!("Connected ws host: {}", host);
             break;
+        } else {
+            warn!("Connect ws host: {} has error, try next host...", host);
         }
     }
 
     let con = con.ok_or_else(|| anyhow!("Can not connect any websocket host!"))?;
     let (mut write, read) = con.split();
     let json = serde_json::to_string(&WsSend { roomid, key })?;
+
+    debug!("Websocket sending json: {}", json);
     let json = pack::encode(&json, 7)?;
     write.send(Message::binary(json)).await?;
 
@@ -147,20 +152,11 @@ async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> 
                 .send(Message::binary(pack::encode("", 2).unwrap()))
                 .await
                 .unwrap();
-            // dbg!("send");
-            sleep(Duration::from_secs(5)).await;
+            debug!("Heartbeat packets have been sent!");
+            sleep(Duration::from_secs(30)).await;
         }
     };
 
     Ok((read, timeout_worker))
 }
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
 
-//     #[test]
-//     fn it_works() {
-//         let result = add(2, 2);
-//         assert_eq!(result, 4);
-//     }
-// }
