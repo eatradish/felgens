@@ -29,7 +29,7 @@ fn pack(buffer: &[u8]) -> Result<BilibiliPackCtx> {
     Ok((data, buf))
 }
 
-fn write_int(buffer: &[u8], start: usize, val: u32) -> Result<Vec<u8>> {
+fn write_int(buffer: &[u8], start: usize, val: u32) -> Vec<u8> {
     let val_bytes = val.to_be_bytes();
 
     let mut buf = buffer.to_vec();
@@ -38,17 +38,17 @@ fn write_int(buffer: &[u8], start: usize, val: u32) -> Result<Vec<u8>> {
         buf[start + i] = *c;
     }
 
-    Ok(buf)
+    buf
 }
 
-pub fn encode(s: &str, op: u8) -> Result<Vec<u8>> {
+pub fn encode(s: &str, op: u8) -> Vec<u8> {
     let data = s.as_bytes();
     let packet_len = 16 + data.len();
     let header = vec![0, 0, 0, 0, 0, 16, 0, 1, 0, 0, 0, op, 0, 0, 0, 1];
 
-    let header = write_int(&header, 0, packet_len as u32)?;
+    let header = write_int(&header, 0, packet_len as u32);
 
-    Ok([&header, data].concat())
+    [&header, data].concat()
 }
 
 pub fn build_pack(buf: &[u8]) -> Result<Vec<String>> {
@@ -58,14 +58,13 @@ pub fn build_pack(buf: &[u8]) -> Result<Vec<String>> {
     Ok(msgs)
 }
 
-fn get_hot_count(body: &[u8]) -> Result<String> {
+fn get_hot_count(body: &[u8]) -> Result<u32> {
     let count = body.pread_with::<PackHotCount>(0, scroll::BE)?.count;
 
-    Ok(count.to_string())
+    Ok(count)
 }
 
 fn zlib_decode(body: &[u8]) -> Result<(BilibiliPackHeader, Vec<u8>)> {
-    // let mut body = body.to_vec();
     let mut buf = vec![];
     let mut z = ZlibDecoder::new(body);
     z.read_to_end(&mut buf)?;

@@ -7,7 +7,7 @@ use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 pub use ws_type::{DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType};
 
-use log::{warn, info, debug};
+use log::{debug, info, warn};
 
 use crate::{http_client::HttpClient, pack::build_pack};
 use ws_type::WsStreamCtx;
@@ -145,13 +145,13 @@ async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> 
     let json = serde_json::to_string(&WsSend { roomid, key })?;
 
     debug!("Websocket sending json: {}", json);
-    let json = pack::encode(&json, 7)?;
+    let json = pack::encode(&json, 7);
     write.send(Message::binary(json)).await?;
 
     let timeout_worker = async move {
         loop {
             write
-                .send(Message::binary(pack::encode("", 2).unwrap()))
+                .send(Message::binary(pack::encode("", 2)))
                 .await
                 .unwrap();
             debug!("Heartbeat packets have been sent!");
@@ -161,4 +161,3 @@ async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> 
 
     Ok((read, timeout_worker))
 }
-

@@ -18,7 +18,7 @@ async fn main() {
 
     // 关注艾露露 (https://live.bilibili.com/22746343) 瞄！
 
-    let ws = ws_socket_object(tx, 22603245);
+    let ws = ws_socket_object(tx, 22746343);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);
@@ -99,8 +99,8 @@ fn print_send_gift(msg: SendGift) {
 
     write!(
         s,
-        "{}: {}了{}x{}",
-        msg.uname, msg.action, msg.gift_name, msg.num
+        "{}: {}了{}x{} ({})",
+        msg.uname, msg.action, msg.gift_name, msg.num, msg.price
     )
     .unwrap();
 
