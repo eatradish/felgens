@@ -1,11 +1,13 @@
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
 use futures_util::{Future, SinkExt, StreamExt, TryStreamExt};
 use serde::Serialize;
 use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
-pub use ws_type::{DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType};
+pub use ws_type::{
+    DanmuMessage, InteractWord, LiveMessageError, LiveMessageResult, SendGift, SuperChatMessage,
+    WsStreamMessageType,
+};
 
 use log::{debug, info, warn};
 
@@ -19,6 +21,32 @@ mod ws_type;
 type WsReadType = futures_util::stream::SplitStream<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
 >;
+
+#[derive(thiserror::Error, Debug)]
+pub enum FelgensError {
+    #[error(transparent)]
+    UrlError(#[from] url::ParseError),
+    #[error("Can not connect any websocket host!")]
+    FailedConnectWsHost,
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::Error),
+    #[error(transparent)]
+    TungsteniteError(#[from] tokio_tungstenite::tungstenite::Error),
+    #[error(transparent)]
+    LiveMessageError(#[from] LiveMessageError),
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
+    #[error(transparent)]
+    ScrollError(#[from] scroll::Error),
+    #[error(transparent)]
+    ReadError(#[from] std::io::Error),
+    #[error("Unsupport proto version! {0}")]
+    UnsupportProto(String),
+    #[error(transparent)]
+    Utf8Error(#[from] std::str::Utf8Error),
+}
+
+pub type FelgensResult<T> = Result<T, FelgensError>;
 
 #[derive(Serialize)]
 struct WsSend {
@@ -62,7 +90,7 @@ struct WsSend {
 pub async fn ws_socket_object(
     tx: mpsc::UnboundedSender<WsStreamMessageType>,
     roomid: u64,
-) -> Result<()> {
+) -> FelgensResult<()> {
     let (mut read, timeout_worker) = prepare(roomid).await?;
 
     let recv = async {
@@ -92,7 +120,7 @@ pub async fn ws_socket_object(
     Ok(())
 }
 
-pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64) -> Result<()> {
+pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64) -> FelgensResult<()> {
     let (mut read, timeout_worker) = prepare(roomid).await?;
 
     let recv = async {
@@ -119,7 +147,7 @@ pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64) -> Re
     Ok(())
 }
 
-async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> {
+async fn prepare(roomid: u64) -> FelgensResult<(WsReadType, impl Future<Output = ()>)> {
     let client = HttpClient::new()?;
     let roomid = client.get_room_id(roomid).await?;
     let dammu_info = client.get_dammu_info(roomid).await?.data;
@@ -140,7 +168,7 @@ async fn prepare(roomid: u64) -> Result<(WsReadType, impl Future<Output = ()>)> 
         }
     }
 
-    let con = con.ok_or_else(|| anyhow!("Can not connect any websocket host!"))?;
+    let con = con.ok_or_else(|| FelgensError::FailedConnectWsHost)?;
     let (mut write, read) = con.split();
     let json = serde_json::to_string(&WsSend { roomid, key })?;
 

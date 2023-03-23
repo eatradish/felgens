@@ -1,8 +1,9 @@
 use std::time::Duration;
-
-use anyhow::{Ok, Result};
-use reqwest::{header::HeaderMap, Client, Response, Url};
+use url::Url;
+use reqwest::{header::HeaderMap, Client, Response};
 use serde::Deserialize;
+
+use crate::FelgensResult;
 
 pub struct HttpClient {
     client: Client,
@@ -36,7 +37,7 @@ pub struct RoomInitData {
 }
 
 impl HttpClient {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> FelgensResult<Self> {
         Ok(Self {
             client: Client::new(),
             base_url: Url::parse("https://api.live.bilibili.com")?,
@@ -48,7 +49,7 @@ impl HttpClient {
         path: &str,
         query: Option<&[(&str, &str)]>,
         headers: Option<HeaderMap>,
-    ) -> Result<Response> {
+    ) -> FelgensResult<Response> {
         let resp = self
             .client
             .get(self.base_url.join(path)?)
@@ -62,7 +63,7 @@ impl HttpClient {
         Ok(resp)
     }
 
-    pub async fn get_dammu_info(&self, room_id: u64) -> Result<DanmuInfo> {
+    pub async fn get_dammu_info(&self, room_id: u64) -> FelgensResult<DanmuInfo> {
         let resp = self
             .get(
                 &format!("xlive/web-room/v1/index/getDanmuInfo?id={}&type=0", room_id),
@@ -76,7 +77,7 @@ impl HttpClient {
         Ok(resp)
     }
 
-    pub async fn get_room_id(&self, room_id: u64) -> Result<u64> {
+    pub async fn get_room_id(&self, room_id: u64) -> FelgensResult<u64> {
         if room_id > 1000 {
             return Ok(room_id);
         }

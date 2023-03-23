@@ -1,6 +1,5 @@
-use anyhow::Result;
 use felgens::{
-    ws_socket_object, DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType,
+    ws_socket_object, DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType, FelgensResult,
 };
 use owo_colors::OwoColorize;
 use std::fmt::Write;
@@ -25,7 +24,7 @@ async fn main() {
     }
 }
 
-async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> Result<()> {
+async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> FelgensResult<()> {
     while let Some(msg) = rx.recv().await {
         match msg {
             WsStreamMessageType::DanmuMsg(msg) => print_danmu_msg(msg),

@@ -1,5 +1,4 @@
-use super::WsStreamCtx;
-use anyhow::{anyhow, Result};
+use super::{LiveMessageError, LiveMessageResult, WsStreamCtx, util::owned};
 
 #[derive(Debug)]
 pub struct InteractWord {
@@ -10,24 +9,24 @@ pub struct InteractWord {
 }
 
 impl InteractWord {
-    pub fn new_from_ctx(ctx: &WsStreamCtx) -> Result<Self> {
+    pub fn new_from_ctx(ctx: &WsStreamCtx) -> LiveMessageResult<Self> {
         let data = ctx
             .data
             .as_ref()
-            .ok_or_else(|| anyhow!("Not a interact word message!"))?;
+            .ok_or_else(|| LiveMessageError::InteractWordError(owned(ctx)))?;
 
         let uname = data
             .uname
             .as_ref()
-            .ok_or_else(|| anyhow!("Can not get interact uname"))?
+            .ok_or_else(|| LiveMessageError::InteractWordError(owned(ctx)))?
             .to_string();
 
         let uid = data
             .uid
             .as_ref()
-            .ok_or_else(|| anyhow!("uid doesn exist"))?
+            .ok_or_else(|| LiveMessageError::InteractWordError(owned(ctx)))?
             .as_u64()
-            .ok_or_else(|| anyhow!("Can not uid trans to u64"))?;
+            .ok_or_else(|| LiveMessageError::InteractWordError(owned(ctx)))?;
 
         let fan = data
             .fans_medal

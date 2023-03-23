@@ -1,5 +1,4 @@
-use super::{util::trans_err, WsStreamCtx};
-use anyhow::{anyhow, Result};
+use super::{LiveMessageError, LiveMessageResult, WsStreamCtx, util::owned};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -13,44 +12,39 @@ pub struct DanmuMessage {
 }
 
 impl DanmuMessage {
-    pub fn new_from_ctx(ctx: &WsStreamCtx) -> Result<Self> {
+    pub fn new_from_ctx(ctx: &WsStreamCtx) -> LiveMessageResult<Self> {
         let info = ctx
             .info
             .as_ref()
-            .ok_or_else(|| anyhow!("Should have info field!"))?;
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?;
 
         let array_2 = info
             .get(2)
-            .ok_or_else(|| trans_err("array_2", 1))?
-            .as_array()
-            .ok_or_else(|| trans_err("array_2", 2))?
+            .and_then(|x| x.as_array())
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
             .to_owned();
 
         let uid = array_2
             .get(0)
-            .ok_or_else(|| trans_err("uid", 1))?
-            .as_u64()
-            .ok_or_else(|| trans_err("uid", 2))?;
+            .and_then(|x| x.as_u64())
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?;
 
         let username = array_2
             .get(1)
-            .ok_or_else(|| trans_err("username", 1))?
-            .as_str()
-            .ok_or_else(|| trans_err("username", 2))?
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
             .to_string();
 
         let msg = info
             .get(1)
-            .ok_or_else(|| trans_err("msg", 1))?
-            .as_str()
-            .ok_or_else(|| trans_err("msg", 2))?
+            .and_then(|x| x.as_u64())
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
             .to_string();
 
         let array_3 = info
             .get(3)
-            .ok_or_else(|| trans_err("array_3", 1))?
-            .as_array()
-            .ok_or_else(|| trans_err("array_3", 2))?
+            .and_then(|x| x.as_array())
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
             .to_owned();
 
         let fan = array_3
@@ -62,13 +56,10 @@ impl DanmuMessage {
 
         let timestamp = info
             .get(0)
-            .ok_or_else(|| trans_err("timestamp", 1))?
-            .as_array()
-            .ok_or_else(|| trans_err("timestamp", 2))?
-            .get(4)
-            .ok_or_else(|| trans_err("timestamp", 3))?
-            .as_u64()
-            .ok_or_else(|| trans_err("trans_err", 4))?;
+            .and_then(|x| x.as_array())
+            .and_then(|x| x.get(4))
+            .and_then(|x| x.as_u64())
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?;
 
         Ok(Self {
             uid,
@@ -80,3 +71,4 @@ impl DanmuMessage {
         })
     }
 }
+

@@ -1,7 +1,6 @@
-use anyhow::{anyhow, Result};
 use serde::Deserialize;
 
-use super::WsStreamCtx;
+use super::{WsStreamCtx, LiveMessageResult, LiveMessageError, util::owned};
 
 #[derive(Debug, Deserialize)]
 pub struct SuperChatMessage {
@@ -17,40 +16,39 @@ pub struct SuperChatMessage {
 }
 
 impl SuperChatMessage {
-    pub fn new_from_ctx(ctx: &WsStreamCtx) -> Result<Self> {
+    pub fn new_from_ctx(ctx: &WsStreamCtx) -> LiveMessageResult<Self> {
         let data = ctx
             .data
             .as_ref()
-            .ok_or_else(|| anyhow!("Not a super chat message!"))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
         let user_info = data
             .user_info
             .as_ref()
-            .ok_or_else(|| anyhow!("Can not get sc user info"))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
         let uname = user_info.uname.to_owned();
 
         let uid = data
             .uid
             .as_ref()
-            .ok_or_else(|| anyhow!("Can not get sc uid"))?
-            .as_u64()
-            .ok_or_else(|| anyhow!("Can not get sc uid step 2!"))?;
+            .and_then(|x| x.as_u64())
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
         let face = user_info.face.to_owned();
 
-        let price = data.price.ok_or_else(|| anyhow!("Can not get sc price!"))?;
+        let price = data.price.ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
         let start_time = data
             .start_time
-            .ok_or_else(|| anyhow!("Can not get sc start_time!"))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
-        let time = data.time.ok_or_else(|| anyhow!("Can not get sc time!"))?;
+        let time = data.time.ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
         let msg = data
             .message
             .as_ref()
-            .ok_or_else(|| anyhow!("Can not get sc message!"))?
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?
             .to_owned();
 
         let madel = data

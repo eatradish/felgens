@@ -11,7 +11,6 @@ repository = "https://github.com/eatradish/felgens"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0"
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -23,6 +22,8 @@ scroll_derive = "0.11"
 reqwest = { version = "0.11", features = ["json"] }
 brotli = "3.3"
 log = "0.4"
+thiserror = "1.0"
+url = "2.3"
 
 [dev-dependencies]
 owo-colors = "3.5"

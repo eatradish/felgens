@@ -4,7 +4,6 @@ mod send_gift;
 mod super_chat;
 mod util;
 
-use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -72,12 +71,30 @@ pub enum WsStreamMessageType {
     // ROOM_REAL_TIME_MESSAGE_UPDATE,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum LiveMessageError {
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::Error),
+    #[error("Can't get superchat message: {0:#?}")]
+    SuperChatMessageError(WsStreamCtx),
+    #[error("Can't get danmu message: {0:#?}")]
+    DanmuMessageError(WsStreamCtx),
+    #[error("Can't get ineract message: {0:#?}")]
+    InteractWordError(WsStreamCtx),
+    #[error("Can't get send gift message: {0:#?}")]
+    SendGiftMessageError(WsStreamCtx),
+    #[error("Unknown msg: {0:#?}")]
+    UnknownMessage(WsStreamCtx),
+}
+
+pub type LiveMessageResult<'a, T> = std::result::Result<T, LiveMessageError>;
+
 impl WsStreamCtx {
-    pub fn new(s: &str) -> Result<Self> {
+    pub fn new(s: &str) -> LiveMessageResult<Self> {
         Ok(serde_json::from_str(s)?)
     }
 
-    pub fn match_msg(&self) -> Result<WsStreamMessageType> {
+    pub fn match_msg(&self) -> LiveMessageResult<WsStreamMessageType> {
         let cmd = self.handle_cmd();
 
         let result = match cmd {
@@ -91,8 +108,7 @@ impl WsStreamCtx {
             Some("SEND_GIFT") | Some("COMBO_SEND") => {
                 WsStreamMessageType::SendGift(SendGift::new_from_ctx(self)?)
             }
-            Some(_) => return Err(anyhow!("unknown msg")),
-            None => return Err(anyhow!("unknown msg")),
+            _ => return Err(LiveMessageError::UnknownMessage(util::owned(self))),
         };
 
         Ok(result)

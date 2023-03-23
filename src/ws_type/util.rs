@@ -1,5 +1,9 @@
-use anyhow::anyhow;
+use super::WsStreamCtx;
 
-pub fn trans_err(name: &str, step: u32) -> anyhow::Error {
-    anyhow!("Can not get {} step {}", name, step)
+pub fn owned(ctx: &WsStreamCtx) -> WsStreamCtx {
+    WsStreamCtx {
+        cmd: ctx.cmd.clone(),
+        info: ctx.info.clone(),
+        data: ctx.data.clone(),
+    }
 }

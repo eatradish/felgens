@@ -1,7 +1,6 @@
-use anyhow::{anyhow, Result};
 use serde::Deserialize;
 
-use super::WsStreamCtx;
+use super::{LiveMessageError, LiveMessageResult, WsStreamCtx, util::owned};
 
 #[derive(Debug, Deserialize)]
 pub struct SendGift {
@@ -16,16 +15,16 @@ pub struct SendGift {
 }
 
 impl SendGift {
-    pub fn new_from_ctx(ctx: &WsStreamCtx) -> Result<Self> {
+    pub fn new_from_ctx(ctx: &WsStreamCtx) -> LiveMessageResult<Self> {
         let data = ctx
             .data
             .as_ref()
-            .ok_or_else(|| anyhow!("Not a Send Gift message!"))?;
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?;
 
         let action = data
             .action
             .as_ref()
-            .ok_or_else(|| anyhow!("Can not get send gift message action!"))?
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?
             .to_owned();
 
         let combo_send = data.combo_send.clone();
@@ -35,7 +34,7 @@ impl SendGift {
         } else if let Some(gift) = combo_send.clone().and_then(|x| x.gift_name) {
             gift
         } else {
-            return Err(anyhow!("Can not get gift name!"));
+            return Err(LiveMessageError::SendGiftMessageError(owned(ctx)));
         };
 
         let num = if let Some(num) = combo_send.clone().and_then(|x| x.combo_num) {
@@ -45,21 +44,21 @@ impl SendGift {
         } else if let Some(num) = combo_send.and_then(|x| x.gift_num) {
             num
         } else {
-            return Err(anyhow!("Can not get gift num!"));
+            return Err(LiveMessageError::SendGiftMessageError(owned(ctx)));
         };
 
         let uname = data
             .uname
             .as_ref()
-            .ok_or_else(|| anyhow!("Can not get uname in gift message!"))?
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?
             .to_owned();
 
         let uid = data
             .uid
             .as_ref()
-            .ok_or_else(|| anyhow!("Can not get uid from gift message!"))?
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?
             .as_u64()
-            .ok_or_else(|| anyhow!("Can not uid as u64 from gift message!"))?;
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?;
 
         let medal_name = data
             .medal_info
@@ -82,7 +81,7 @@ impl SendGift {
 
         let price = data
             .price
-            .ok_or_else(|| anyhow!("Can not get price from gift message!"))?;
+            .ok_or_else(||  LiveMessageError::SendGiftMessageError(owned(ctx)))?;
 
         Ok(Self {
             action,

@@ -1,5 +1,4 @@
-use anyhow::Result;
-use felgens::ws_socket_str;
+use felgens::{ws_socket_str, FelgensResult};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 #[tokio::main]
@@ -15,7 +14,7 @@ async fn main() {
     }
 }
 
-async fn recv(mut rx: UnboundedReceiver<String>) -> Result<()> {
+async fn recv(mut rx: UnboundedReceiver<String>) -> FelgensResult<()> {
     while let Some(msg) = rx.recv().await {
         println!("{}", msg);
     }

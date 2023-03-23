@@ -1,9 +1,10 @@
 use std::io::Read;
 
-use anyhow::{anyhow, Result};
 use flate2::read::ZlibDecoder;
 use scroll::Pread;
 use scroll_derive::Pread;
+
+use crate::{FelgensResult, FelgensError};
 
 #[derive(Debug, Pread, Clone)]
 struct BilibiliPackHeader {
@@ -21,7 +22,7 @@ struct PackHotCount {
 
 type BilibiliPackCtx<'a> = (BilibiliPackHeader, &'a [u8]);
 
-fn pack(buffer: &[u8]) -> Result<BilibiliPackCtx> {
+fn pack(buffer: &[u8]) -> FelgensResult<BilibiliPackCtx> {
     let data = buffer.pread_with(0, scroll::BE)?;
 
     let buf = &buffer[16..];
@@ -51,20 +52,20 @@ pub fn encode(s: &str, op: u8) -> Vec<u8> {
     [&header, data].concat()
 }
 
-pub fn build_pack(buf: &[u8]) -> Result<Vec<String>> {
+pub fn build_pack(buf: &[u8]) -> FelgensResult<Vec<String>> {
     let ctx = pack(buf)?;
     let msgs = decode(ctx)?;
 
     Ok(msgs)
 }
 
-fn get_hot_count(body: &[u8]) -> Result<u32> {
+fn get_hot_count(body: &[u8]) -> FelgensResult<u32> {
     let count = body.pread_with::<PackHotCount>(0, scroll::BE)?.count;
 
     Ok(count)
 }
 
-fn zlib_decode(body: &[u8]) -> Result<(BilibiliPackHeader, Vec<u8>)> {
+fn zlib_decode(body: &[u8]) -> FelgensResult<(BilibiliPackHeader, Vec<u8>)> {
     let mut buf = vec![];
     let mut z = ZlibDecoder::new(body);
     z.read_to_end(&mut buf)?;
@@ -76,7 +77,7 @@ fn zlib_decode(body: &[u8]) -> Result<(BilibiliPackHeader, Vec<u8>)> {
     Ok((header, buf))
 }
 
-fn decode(ctx: BilibiliPackCtx) -> Result<Vec<String>> {
+fn decode(ctx: BilibiliPackCtx) -> FelgensResult<Vec<String>> {
     let (mut header, body) = ctx;
 
     let mut buf = body.to_vec();
@@ -93,13 +94,13 @@ fn decode(ctx: BilibiliPackCtx) -> Result<Vec<String>> {
     let msgs = match header.ver {
         0 => split_msgs(buf, header)?,
         1 => vec![format!("{{\"count\": {}}}", get_hot_count(&buf)?)],
-        x => return Err(anyhow!("Unsupport proto version! {}", x)),
+        x => return Err(FelgensError::UnsupportProto(x.to_string())),
     };
 
     Ok(msgs)
 }
 
-fn split_msgs(buf: Vec<u8>, header: BilibiliPackHeader) -> Result<Vec<String>> {
+fn split_msgs(buf: Vec<u8>, header: BilibiliPackHeader) -> FelgensResult<Vec<String>> {
     let mut buf = buf;
     let mut header = header;
     let mut msgs = vec![];
@@ -126,7 +127,7 @@ fn split_msgs(buf: Vec<u8>, header: BilibiliPackHeader) -> Result<Vec<String>> {
     Ok(msgs)
 }
 
-fn brotli_decode(body: &[u8]) -> Result<(BilibiliPackHeader, Vec<u8>)> {
+fn brotli_decode(body: &[u8]) -> FelgensResult<(BilibiliPackHeader, Vec<u8>)> {
     let mut reader = brotli::Decompressor::new(body, 4096);
 
     let mut buf = Vec::new();
