@@ -1,4 +1,4 @@
-use super::{LiveMessageError, LiveMessageResult, WsStreamCtx, util::owned};
+use super::{util::owned, LiveMessageError, LiveMessageResult, WsStreamCtx};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -71,4 +71,3 @@ impl DanmuMessage {
         })
     }
 }
-

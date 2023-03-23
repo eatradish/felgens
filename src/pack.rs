@@ -4,7 +4,7 @@ use flate2::read::ZlibDecoder;
 use scroll::Pread;
 use scroll_derive::Pread;
 
-use crate::{FelgensResult, FelgensError};
+use crate::{FelgensError, FelgensResult};
 
 #[derive(Debug, Pread, Clone)]
 struct BilibiliPackHeader {
@@ -112,7 +112,7 @@ fn split_msgs(buf: Vec<u8>, header: BilibiliPackHeader) -> FelgensResult<Vec<Str
     offset += header.pack_len - 16;
 
     while offset != buf_len as u32 {
-        let ctx = pack(&*buf)?;
+        let ctx = pack(&buf)?;
 
         header = ctx.0;
         buf = ctx.1.to_vec();

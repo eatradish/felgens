@@ -1,5 +1,6 @@
 use felgens::{
-    ws_socket_object, DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType, FelgensResult,
+    ws_socket_object, DanmuMessage, FelgensResult, InteractWord, SendGift, SuperChatMessage,
+    WsStreamMessageType,
 };
 use owo_colors::OwoColorize;
 use std::fmt::Write;
@@ -44,7 +45,7 @@ fn print_danmu_msg(msg: DanmuMessage) {
         write!(
             s,
             "[{}({})] {}: ",
-            msg.fan.unwrap_or_else(|| "".to_string()),
+            msg.fan.unwrap_or_default(),
             fl,
             msg.username
         )

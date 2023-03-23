@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::{WsStreamCtx, LiveMessageResult, LiveMessageError, util::owned};
+use super::{util::owned, LiveMessageError, LiveMessageResult, WsStreamCtx};
 
 #[derive(Debug, Deserialize)]
 pub struct SuperChatMessage {
@@ -37,13 +37,17 @@ impl SuperChatMessage {
 
         let face = user_info.face.to_owned();
 
-        let price = data.price.ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
+        let price = data
+            .price
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
         let start_time = data
             .start_time
             .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
-        let time = data.time.ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
+        let time = data
+            .time
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
 
         let msg = data
             .message

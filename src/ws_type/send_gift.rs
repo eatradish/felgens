@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::{LiveMessageError, LiveMessageResult, WsStreamCtx, util::owned};
+use super::{util::owned, LiveMessageError, LiveMessageResult, WsStreamCtx};
 
 #[derive(Debug, Deserialize)]
 pub struct SendGift {
@@ -81,7 +81,7 @@ impl SendGift {
 
         let price = data
             .price
-            .ok_or_else(||  LiveMessageError::SendGiftMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?;
 
         Ok(Self {
             action,

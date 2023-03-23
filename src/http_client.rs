@@ -1,7 +1,7 @@
-use std::time::Duration;
-use url::Url;
 use reqwest::{header::HeaderMap, Client, Response};
 use serde::Deserialize;
+use std::time::Duration;
+use url::Url;
 
 use crate::FelgensResult;
 

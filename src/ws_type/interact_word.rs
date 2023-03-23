@@ -1,4 +1,4 @@
-use super::{LiveMessageError, LiveMessageResult, WsStreamCtx, util::owned};
+use super::{util::owned, LiveMessageError, LiveMessageResult, WsStreamCtx};
 
 #[derive(Debug)]
 pub struct InteractWord {
