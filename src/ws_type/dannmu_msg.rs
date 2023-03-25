@@ -37,7 +37,7 @@ impl DanmuMessage {
 
         let msg = info
             .get(1)
-            .and_then(|x| x.as_u64())
+            .and_then(|x| x.as_str())
             .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
             .to_string();
 
