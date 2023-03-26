@@ -5,10 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.3.1 (2023-03-26)
+
+### Other
+
+ - <csr-id-6f9adf600c9d8ae791c7f35ecbc85b003bfc7513/> fix DanmuMessage construct
+
+### Refactor
+
+ - <csr-id-d3d0a9c8eb7576b6642ec9ff590fd398352d628f/> lint code style use cargo clippy and cargo fmt
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release over the course of 2 calendar days.
+ - 2 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Fix DanmuMessage construct ([`6f9adf6`](https://github.com/eatradish/felgens/commit/6f9adf600c9d8ae791c7f35ecbc85b003bfc7513))
+    - Lint code style use cargo clippy and cargo fmt ([`d3d0a9c`](https://github.com/eatradish/felgens/commit/d3d0a9c8eb7576b6642ec9ff590fd398352d628f))
+</details>
+
 ## v0.3.0 (2023-03-23)
 
 <csr-id-5a78577310a1064ae8f28de80ea076108fbc8d96/>
 <csr-id-d9f55d7e5bf119c4bbfd7858551433a6842085ff/>
+<csr-id-0169528a898b968ff732e77b2e630ebf00a55a92/>
 
 ### Chore
 
@@ -30,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release over the course of 111 calendar days.
+ - 6 commits contributed to the release over the course of 111 calendar days.
  - 111 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -42,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump felgens v0.3.0 ([`a30d659`](https://github.com/eatradish/felgens/commit/a30d65971ea5c2bb899450966b701d49071fe58c))
     - Add CHANGELOG ([`0169528`](https://github.com/eatradish/felgens/commit/0169528a898b968ff732e77b2e630ebf00a55a92))
     - Bump version to 0.3.0 to adapt smart-release ([`5a78577`](https://github.com/eatradish/felgens/commit/5a78577310a1064ae8f28de80ea076108fbc8d96))
     - Add FelgensResult and FelgensError to handle Error ([`99c4b1a`](https://github.com/eatradish/felgens/commit/99c4b1ad8a7a63430e64634c74015f3b220c6f1d))
