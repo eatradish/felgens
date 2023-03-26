@@ -9,7 +9,7 @@ pub use ws_type::{
     WsStreamMessageType,
 };
 
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 
 use crate::{http_client::HttpClient, pack::build_pack};
 use ws_type::WsStreamCtx;
@@ -102,12 +102,18 @@ pub async fn ws_socket_object(
 
                 if let Ok(msgs) = s {
                     for i in msgs {
-                        let ws = WsStreamCtx::new(&i).unwrap();
-                        match ws.match_msg() {
-                            Ok(v) => tx.send(v).unwrap(),
-                            Err(_) => {
-                                warn!("This message parsing is not yet supported:\n{}", i);
+                        let ws = WsStreamCtx::new(&i);
+                        if let Ok(ws) = ws {
+                            match ws.match_msg() {
+                                Ok(v) => tx.send(v).unwrap(),
+                                Err(e) => {
+                                    warn!(
+                                        "This message parsing is not yet supported:\nMessage: {i}\nErr: {e:#?}"
+                                    );
+                                }
                             }
+                        } else {
+                            error!("{}", ws.unwrap_err());
                         }
                     }
                 }
@@ -125,12 +131,9 @@ pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64) -> Fe
 
     let recv = async {
         while let Ok(Some(msg)) = read.try_next().await {
-            // dbg!(&msg);
             let data = msg.into_data();
 
             if !data.is_empty() {
-                // let data = pack(&data).unwrap();
-
                 let s = build_pack(&data);
 
                 if let Ok(msgs) = s {

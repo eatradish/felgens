@@ -18,7 +18,7 @@ async fn main() {
 
     // 关注艾露露 (https://live.bilibili.com/22746343) 瞄！
 
-    let ws = ws_socket_object(tx, 22746343);
+    let ws = ws_socket_object(tx, 81004);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);
