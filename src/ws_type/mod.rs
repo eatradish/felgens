@@ -17,6 +17,8 @@ pub struct WsStreamCtx {
     cmd: Option<String>,
     info: Option<Vec<Value>>,
     data: Option<WsStreamCtxData>,
+    #[serde(flatten)]
+    v: Value,
 }
 
 #[derive(Debug, Deserialize, Clone)]

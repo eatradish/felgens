@@ -5,5 +5,6 @@ pub fn owned(ctx: &WsStreamCtx) -> WsStreamCtx {
         cmd: ctx.cmd.clone(),
         info: ctx.info.clone(),
         data: ctx.data.clone(),
+        v: ctx.v.clone(),
     }
 }
