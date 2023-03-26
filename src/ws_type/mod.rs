@@ -91,7 +91,7 @@ pub type LiveMessageResult<'a, T> = std::result::Result<T, LiveMessageError>;
 
 impl WsStreamCtx {
     pub fn new(s: &str) -> LiveMessageResult<Self> {
-        Ok(serde_json::from_str(s).map_err(|_| LiveMessageError::CantParse(s.to_string()))?)
+        serde_json::from_str(s).map_err(|_| LiveMessageError::CantParse(s.to_string()))
     }
 
     pub fn match_msg(&self) -> LiveMessageResult<WsStreamMessageType> {
