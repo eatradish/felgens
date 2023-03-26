@@ -7,7 +7,12 @@ async fn main() {
 
     // 关注艾露露 (https://live.bilibili.com/22746343) 喵！
 
-    let ws = ws_socket_str(tx, 22746343);
+    let room_id = std::env::var("FELGENS_ROOMID")
+        .ok()
+        .and_then(|x| x.parse::<u64>().ok())
+        .unwrap_or(22746343);
+
+    let ws = ws_socket_str(tx, room_id);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);
