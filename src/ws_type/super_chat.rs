@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::{util::owned, LiveMessageError, LiveMessageResult, WsStreamCtx};
+use super::{LiveMessageError, LiveMessageResult, WsStreamCtx};
 
 #[derive(Debug, Deserialize)]
 pub struct SuperChatMessage {
@@ -20,12 +20,12 @@ impl SuperChatMessage {
         let data = ctx
             .data
             .as_ref()
-            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(ctx.clone()))?;
 
         let user_info = data
             .user_info
             .as_ref()
-            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(ctx.clone()))?;
 
         let uname = user_info.uname.to_owned();
 
@@ -33,26 +33,26 @@ impl SuperChatMessage {
             .uid
             .as_ref()
             .and_then(|x| x.as_u64())
-            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(ctx.clone()))?;
 
         let face = user_info.face.to_owned();
 
         let price = data
             .price
-            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(ctx.clone()))?;
 
         let start_time = data
             .start_time
-            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(ctx.clone()))?;
 
         let time = data
             .time
-            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(ctx.clone()))?;
 
         let msg = data
             .message
             .as_ref()
-            .ok_or_else(|| LiveMessageError::SuperChatMessageError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::SuperChatMessageError(ctx.clone()))?
             .to_owned();
 
         let madel = data

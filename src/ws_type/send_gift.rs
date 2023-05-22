@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::{util::owned, LiveMessageError, LiveMessageResult, WsStreamCtx};
+use super::{LiveMessageError, LiveMessageResult, WsStreamCtx};
 
 #[derive(Debug, Deserialize)]
 pub struct SendGift {
@@ -19,12 +19,12 @@ impl SendGift {
         let data = ctx
             .data
             .as_ref()
-            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(ctx.clone()))?;
 
         let action = data
             .action
             .as_ref()
-            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(ctx.clone()))?
             .to_owned();
 
         let combo_send = data.combo_send.clone();
@@ -34,7 +34,7 @@ impl SendGift {
         } else if let Some(gift) = combo_send.clone().and_then(|x| x.gift_name) {
             gift
         } else {
-            return Err(LiveMessageError::SendGiftMessageError(owned(ctx)));
+            return Err(LiveMessageError::SendGiftMessageError(ctx.clone()));
         };
 
         let num = if let Some(num) = combo_send.clone().and_then(|x| x.combo_num) {
@@ -44,21 +44,21 @@ impl SendGift {
         } else if let Some(num) = combo_send.and_then(|x| x.gift_num) {
             num
         } else {
-            return Err(LiveMessageError::SendGiftMessageError(owned(ctx)));
+            return Err(LiveMessageError::SendGiftMessageError(ctx.clone()));
         };
 
         let uname = data
             .uname
             .as_ref()
-            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(ctx.clone()))?
             .to_owned();
 
         let uid = data
             .uid
             .as_ref()
-            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(ctx.clone()))?
             .as_u64()
-            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(ctx.clone()))?;
 
         let medal_name = data
             .medal_info
@@ -81,7 +81,7 @@ impl SendGift {
 
         let price = data
             .price
-            .ok_or_else(|| LiveMessageError::SendGiftMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::SendGiftMessageError(ctx.clone()))?;
 
         Ok(Self {
             action,

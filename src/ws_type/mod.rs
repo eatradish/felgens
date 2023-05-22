@@ -2,7 +2,6 @@ mod dannmu_msg;
 mod interact_word;
 mod send_gift;
 mod super_chat;
-mod util;
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -12,13 +11,13 @@ pub use self::interact_word::InteractWord;
 pub use self::send_gift::SendGift;
 pub use self::super_chat::SuperChatMessage;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct WsStreamCtx {
     cmd: Option<String>,
     info: Option<Vec<Value>>,
     data: Option<WsStreamCtxData>,
     #[serde(flatten)]
-    v: Value,
+    _v: Value,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -110,7 +109,7 @@ impl WsStreamCtx {
             Some("SEND_GIFT") | Some("COMBO_SEND") => {
                 WsStreamMessageType::SendGift(SendGift::new_from_ctx(self)?)
             }
-            _ => return Err(LiveMessageError::UnknownMessage(util::owned(self))),
+            _ => return Err(LiveMessageError::UnknownMessage(self.clone())),
         };
 
         Ok(result)

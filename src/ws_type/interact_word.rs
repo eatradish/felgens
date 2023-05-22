@@ -1,4 +1,4 @@
-use super::{util::owned, LiveMessageError, LiveMessageResult, WsStreamCtx};
+use super::{LiveMessageError, LiveMessageResult, WsStreamCtx};
 
 #[derive(Debug)]
 pub struct InteractWord {
@@ -13,20 +13,20 @@ impl InteractWord {
         let data = ctx
             .data
             .as_ref()
-            .ok_or_else(|| LiveMessageError::InteractWordError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::InteractWordError(ctx.clone()))?;
 
         let uname = data
             .uname
             .as_ref()
-            .ok_or_else(|| LiveMessageError::InteractWordError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::InteractWordError(ctx.clone()))?
             .to_string();
 
         let uid = data
             .uid
             .as_ref()
-            .ok_or_else(|| LiveMessageError::InteractWordError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::InteractWordError(ctx.clone()))?
             .as_u64()
-            .ok_or_else(|| LiveMessageError::InteractWordError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::InteractWordError(ctx.clone()))?;
 
         let fan = data
             .fans_medal

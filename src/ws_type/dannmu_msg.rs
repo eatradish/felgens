@@ -1,4 +1,4 @@
-use super::{util::owned, LiveMessageError, LiveMessageResult, WsStreamCtx};
+use super::{LiveMessageError, LiveMessageResult, WsStreamCtx};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -16,35 +16,35 @@ impl DanmuMessage {
         let info = ctx
             .info
             .as_ref()
-            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?;
 
         let array_2 = info
             .get(2)
             .and_then(|x| x.as_array())
-            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?
             .to_owned();
 
         let uid = array_2
             .get(0)
             .and_then(|x| x.as_u64())
-            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?;
 
         let username = array_2
             .get(1)
             .and_then(|x| x.as_str())
-            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?
             .to_string();
 
         let msg = info
             .get(1)
             .and_then(|x| x.as_str())
-            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?
             .to_string();
 
         let array_3 = info
             .get(3)
             .and_then(|x| x.as_array())
-            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?
             .to_owned();
 
         let fan = array_3
@@ -59,7 +59,7 @@ impl DanmuMessage {
             .and_then(|x| x.as_array())
             .and_then(|x| x.get(4))
             .and_then(|x| x.as_u64())
-            .ok_or_else(|| LiveMessageError::DanmuMessageError(owned(ctx)))?;
+            .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?;
 
         Ok(Self {
             uid,
