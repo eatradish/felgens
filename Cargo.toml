@@ -15,7 +15,7 @@ flate2 = { version = "1.0", features = ["zlib"], default-features = false }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.19", features = ["macros", "rt", "rt-multi-thread", "io-util", "io-std", "time"] }
-tokio-tungstenite = { version = "0.18", features = ["connect", "native-tls"] }
+tokio-tungstenite = { version = "0.19", features = ["connect", "native-tls"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 scroll = "0.11"
 scroll_derive = "0.11"
