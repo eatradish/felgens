@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use futures_util::{Future, SinkExt, StreamExt, TryStreamExt};
+use futures_util::{SinkExt, StreamExt, TryStreamExt};
 use serde::Serialize;
 use tokio::{sync::mpsc, time::sleep};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
@@ -20,6 +20,11 @@ mod ws_type;
 
 type WsReadType = futures_util::stream::SplitStream<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
+>;
+
+type WsWriteType = futures_util::stream::SplitSink<
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
+    Message,
 >;
 
 #[derive(thiserror::Error, Debug)]
@@ -44,6 +49,10 @@ pub enum FelgensError {
     UnsupportProto(String),
     #[error(transparent)]
     Utf8Error(#[from] std::str::Utf8Error),
+    #[error(transparent)]
+    WsStreamMessageTypeSendError(#[from] tokio::sync::mpsc::error::SendError<WsStreamMessageType>),
+    #[error(transparent)]
+    StringSendError(#[from] tokio::sync::mpsc::error::SendError<String>),
 }
 
 pub type FelgensResult<T> = Result<T, FelgensError>;
@@ -91,66 +100,70 @@ pub async fn ws_socket_object(
     tx: mpsc::UnboundedSender<WsStreamMessageType>,
     roomid: u64,
 ) -> FelgensResult<()> {
-    let (mut read, timeout_worker) = prepare(roomid).await?;
+    let (write, read) = prepare(roomid).await?;
 
-    let recv = async {
-        while let Ok(Some(msg)) = read.try_next().await {
-            let data = msg.into_data();
+    tokio::select!(v = send_heartbeat_packets(write) => v, v = recv(read, tx) => v)?;
 
-            if !data.is_empty() {
-                let s = build_pack(&data);
+    Ok(())
+}
 
-                if let Ok(msgs) = s {
-                    for i in msgs {
-                        let ws = WsStreamCtx::new(&i);
-                        if let Ok(ws) = ws {
-                            match ws.match_msg() {
-                                Ok(v) => tx.send(v).unwrap(),
-                                Err(e) => {
-                                    warn!(
-                                        "This message parsing is not yet supported:\nMessage: {i}\nErr: {e:#?}"
-                                    );
-                                }
+async fn recv(mut read: WsReadType, tx: mpsc::UnboundedSender<WsStreamMessageType>) -> FelgensResult<()> {
+    while let Ok(Some(msg)) = read.try_next().await {
+        let data = msg.into_data();
+
+        if !data.is_empty() {
+            let s = build_pack(&data);
+
+            if let Ok(msgs) = s {
+                for i in msgs {
+                    let ws = WsStreamCtx::new(&i);
+                    if let Ok(ws) = ws {
+                        match ws.match_msg() {
+                            Ok(v) => tx.send(v)?,
+                            Err(e) => {
+                                warn!(
+                                    "This message parsing is not yet supported:\nMessage: {i}\nErr: {e:#?}"
+                                );
                             }
-                        } else {
-                            error!("{}", ws.unwrap_err());
                         }
+                    } else {
+                        error!("{}", ws.unwrap_err());
                     }
                 }
             }
         }
-    };
+    }
 
-    tokio::select!(v = timeout_worker => v, v = recv => v);
+    Ok(())
+}
+
+async fn recv_string(mut read: WsReadType, tx: mpsc::UnboundedSender<String>) -> FelgensResult<()> {
+    while let Ok(Some(msg)) = read.try_next().await {
+        let data = msg.into_data();
+
+        if !data.is_empty() {
+            let s = build_pack(&data);
+
+            if let Ok(msgs) = s {
+                for i in msgs {
+                    tx.send(i)?;
+                }
+            }
+        }
+    }
 
     Ok(())
 }
 
 pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64) -> FelgensResult<()> {
-    let (mut read, timeout_worker) = prepare(roomid).await?;
+    let (write, read) = prepare(roomid).await?;
 
-    let recv = async {
-        while let Ok(Some(msg)) = read.try_next().await {
-            let data = msg.into_data();
-
-            if !data.is_empty() {
-                let s = build_pack(&data);
-
-                if let Ok(msgs) = s {
-                    for i in msgs {
-                        tx.send(i).unwrap();
-                    }
-                }
-            }
-        }
-    };
-
-    tokio::select!(v = timeout_worker => v, v = recv => v);
+    tokio::select!(v = send_heartbeat_packets(write) => v, v = recv_string(read, tx) => v)?;
 
     Ok(())
 }
 
-async fn prepare(roomid: u64) -> FelgensResult<(WsReadType, impl Future<Output = ()>)> {
+async fn prepare(roomid: u64) -> FelgensResult<(WsWriteType, WsReadType)> {
     let client = HttpClient::new()?;
     let roomid = client.get_room_id(roomid).await?;
     let dammu_info = client.get_dammu_info(roomid).await?.data;
@@ -179,16 +192,15 @@ async fn prepare(roomid: u64) -> FelgensResult<(WsReadType, impl Future<Output =
     let json = pack::encode(&json, 7);
     write.send(Message::binary(json)).await?;
 
-    let timeout_worker = async move {
-        loop {
-            write
-                .send(Message::binary(pack::encode("", 2)))
-                .await
-                .unwrap();
-            debug!("Heartbeat packets have been sent!");
-            sleep(Duration::from_secs(30)).await;
-        }
-    };
+    Ok((write, read))
+}
 
-    Ok((read, timeout_worker))
+async fn send_heartbeat_packets(mut write: WsWriteType) -> FelgensResult<()> {
+    loop {
+        write
+            .send(Message::binary(pack::encode("", 2)))
+            .await?;
+        debug!("Heartbeat packets have been sent!");
+        sleep(Duration::from_secs(30)).await;
+    }
 }
