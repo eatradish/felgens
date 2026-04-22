@@ -5,8 +5,6 @@ use tokio::sync::mpsc::{self, UnboundedReceiver};
 async fn main() {
     let (tx, rx) = mpsc::unbounded_channel();
 
-    // 关注艾露露 (https://live.bilibili.com/22746343) 喵！
-
     let room_id = std::env::var("FELGENS_ROOMID")
         .ok()
         .and_then(|x| x.parse::<u64>().ok())
