@@ -1,13 +1,10 @@
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt, TryStreamExt};
-pub use reqwest::header::HeaderMap;
+use reqwest::header::HeaderMap;
 use serde::Serialize;
 use tokio::{sync::mpsc, time::sleep};
-use tokio_tungstenite::{
-    connect_async,
-    tungstenite::{handshake::headers, Message},
-};
+use tokio_tungstenite::{connect_async, tungstenite::Message};
 pub use ws_type::{
     DanmuMessage, InteractWord, LiveMessageError, LiveMessageResult, SendGift, SuperChatMessage,
     WsStreamMessageType,
@@ -43,7 +40,7 @@ pub enum FelgensError {
     #[error(transparent)]
     TungsteniteError(#[from] tokio_tungstenite::tungstenite::Error),
     #[error(transparent)]
-    LiveMessageError(#[from] LiveMessageError),
+    LiveMessageError(#[from] Box<LiveMessageError>),
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
@@ -164,7 +161,11 @@ async fn recv_string(mut read: WsReadType, tx: mpsc::UnboundedSender<String>) ->
     Ok(())
 }
 
-pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64, cookie: &str) -> FelgensResult<()> {
+pub async fn ws_socket_str(
+    tx: mpsc::UnboundedSender<String>,
+    roomid: u64,
+    cookie: &str,
+) -> FelgensResult<()> {
     let (write, read) = prepare(roomid, cookie).await?;
 
     tokio::select!(v = send_heartbeat_packets(write) => v, v = recv_string(read, tx) => v)?;
@@ -182,27 +183,10 @@ async fn prepare(roomid: u64, cookie: &str) -> FelgensResult<(WsWriteType, WsRea
         cookie.parse().expect("Failed to parse cookie!"),
     );
 
-    // let sessdata = cookie
-    //     .split(';')
-    //     .find_map(|kv| {
-    //         let mut parts = kv.trim().splitn(2, '=');
-    //         let key = parts.next()?.trim();
-    //         let value = parts.next()?.trim();
-    //         if key == "SESSDATA" {
-    //             Some(value.to_string())
-    //         } else {
-    //             None
-    //         }
-    //     })
-    //     .unwrap_or_else(|| "".to_string());
-    
-    let uid = client.get_uid(headers.clone()).await? as u32;
+    let (_, _, uid) = client.get_nav(headers.clone()).await?;
+    debug!("uid is: {}", uid);
 
-    // dbg!(uid);
-
-    // debug!("uid is: {}", uid);
-
-    let dammu_info = client.get_dammu_info(roomid, Some(headers)).await?.data;
+    let dammu_info = client.get_dammu_info(roomid, headers).await?.data;
     let key = dammu_info.token;
     let host_list = dammu_info.host_list;
     let mut con = None;
@@ -223,7 +207,11 @@ async fn prepare(roomid: u64, cookie: &str) -> FelgensResult<(WsWriteType, WsRea
     let con = con.ok_or_else(|| FelgensError::FailedConnectWsHost)?;
     let (mut write, read) = con.split();
 
-    let json = serde_json::to_string(&WsSend { roomid, key, uid })?;
+    let json = serde_json::to_string(&WsSend {
+        roomid,
+        key,
+        uid: uid as u32,
+    })?;
 
     debug!("Websocket sending json: {}", json);
     let json = pack::encode(&json, 7);

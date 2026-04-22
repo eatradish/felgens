@@ -91,11 +91,11 @@ pub enum LiveMessageError {
 pub type LiveMessageResult<'a, T> = std::result::Result<T, LiveMessageError>;
 
 impl WsStreamCtx {
-    pub fn new(s: &str) -> LiveMessageResult<Self> {
+    pub fn new(s: &'_ str) -> LiveMessageResult<'_, Self> {
         serde_json::from_str(s).map_err(|_| LiveMessageError::CantParse(s.to_string()))
     }
 
-    pub fn match_msg(&self) -> LiveMessageResult<WsStreamMessageType> {
+    pub fn match_msg(&'_ self) -> LiveMessageResult<'_, WsStreamMessageType> {
         let cmd = self.handle_cmd();
 
         let result = match cmd {

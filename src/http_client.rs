@@ -45,6 +45,13 @@ struct NavResponse {
 #[derive(Debug, Deserialize)]
 struct NavData {
     mid: u64,
+    wbi_img: WbiImg,
+}
+
+#[derive(Debug, Deserialize)]
+struct WbiImg {
+    img_url: String,
+    sub_url: String,
 }
 
 impl HttpClient {
@@ -97,20 +104,20 @@ impl HttpClient {
     pub async fn get_dammu_info(
         &self,
         room_id: u64,
-        headers: Option<HeaderMap>,
+        headers: HeaderMap,
     ) -> FelgensResult<DanmuInfo> {
         let mut params = BTreeMap::new();
         params.insert("id".to_string(), room_id.to_string());
         params.insert("type".to_string(), "0".to_string());
         params.insert("web_location".to_string(), "444.8".to_string());
 
-        let sign = sign_request(params).await?;
+        let sign = sign_request(self, params, headers.clone()).await?;
 
         let resp = self
             .get_live(
                 &format!("xlive/web-room/v1/index/getDanmuInfo?{}", sign),
                 None,
-                headers,
+                Some(headers),
             )
             .await?
             .json::<DanmuInfo>()
@@ -119,14 +126,26 @@ impl HttpClient {
         Ok(resp)
     }
 
-    pub async fn get_uid(&self, headers: HeaderMap) -> FelgensResult<u64> {
+    pub async fn get_nav(&self, headers: HeaderMap) -> FelgensResult<(String, String, u64)> {
         let resp = self
             .get("x/web-interface/nav", None, Some(headers))
             .await?
             .json::<NavResponse>()
             .await?;
 
-        Ok(resp.data.mid)
+        let extract_key = |url: &str| {
+            url.split('/')
+                .next_back()
+                .and_then(|s| s.split('.').next())
+                .unwrap_or("")
+                .to_string()
+        };
+
+        Ok((
+            extract_key(&resp.data.wbi_img.img_url),
+            extract_key(&resp.data.wbi_img.sub_url),
+            resp.data.mid,
+        ))
     }
 
     pub async fn get_room_id(&self, room_id: u64) -> FelgensResult<u64> {

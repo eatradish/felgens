@@ -22,7 +22,7 @@ struct PackHotCount {
 
 type BilibiliPackCtx<'a> = (BilibiliPackHeader, &'a [u8]);
 
-fn pack(buffer: &[u8]) -> FelgensResult<BilibiliPackCtx> {
+fn pack(buffer: &'_ [u8]) -> FelgensResult<BilibiliPackCtx<'_>> {
     let data = buffer.pread_with(0, scroll::BE)?;
 
     let buf = &buffer[16..];

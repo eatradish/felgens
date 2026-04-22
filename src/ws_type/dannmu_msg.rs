@@ -12,7 +12,7 @@ pub struct DanmuMessage {
 }
 
 impl DanmuMessage {
-    pub fn new_from_ctx(ctx: &WsStreamCtx) -> LiveMessageResult<Self> {
+    pub fn new_from_ctx(ctx: &'_ WsStreamCtx) -> LiveMessageResult<'_, Self> {
         let info = ctx
             .info
             .as_ref()
@@ -24,8 +24,7 @@ impl DanmuMessage {
             .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?
             .to_owned();
 
-        let uid = array_2
-            .get(0)
+        let uid = array_2.first()
             .and_then(|x| x.as_u64())
             .ok_or_else(|| LiveMessageError::DanmuMessageError(ctx.clone()))?;
 
@@ -52,10 +51,9 @@ impl DanmuMessage {
             .and_then(|x| x.as_str())
             .map(|x| x.to_owned());
 
-        let fan_level = array_3.get(0).and_then(|x| x.as_u64());
+        let fan_level = array_3.first().and_then(|x| x.as_u64());
 
-        let timestamp = info
-            .get(0)
+        let timestamp = info.first()
             .and_then(|x| x.as_array())
             .and_then(|x| x.get(4))
             .and_then(|x| x.as_u64())

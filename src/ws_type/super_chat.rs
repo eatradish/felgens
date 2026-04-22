@@ -16,7 +16,7 @@ pub struct SuperChatMessage {
 }
 
 impl SuperChatMessage {
-    pub fn new_from_ctx(ctx: &WsStreamCtx) -> LiveMessageResult<Self> {
+    pub fn new_from_ctx(ctx: &'_ WsStreamCtx) -> LiveMessageResult<'_, Self> {
         let data = ctx
             .data
             .as_ref()
