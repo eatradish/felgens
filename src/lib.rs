@@ -98,7 +98,7 @@ struct WsSend {
 ///     Ok(())
 /// }
 /// ```
-pub async fn ws_socket_object(
+pub async fn ws_socket(
     tx: mpsc::UnboundedSender<WsStreamMessageType>,
     roomid: u64,
     cookie: &str,
@@ -143,7 +143,7 @@ async fn recv(
     Ok(())
 }
 
-async fn recv_string(mut read: WsReadType, tx: mpsc::UnboundedSender<String>) -> FelgensResult<()> {
+async fn recv_raw(mut read: WsReadType, tx: mpsc::UnboundedSender<String>) -> FelgensResult<()> {
     while let Ok(Some(msg)) = read.try_next().await {
         let data = msg.into_data();
 
@@ -161,14 +161,14 @@ async fn recv_string(mut read: WsReadType, tx: mpsc::UnboundedSender<String>) ->
     Ok(())
 }
 
-pub async fn ws_socket_str(
+pub async fn ws_socket_raw(
     tx: mpsc::UnboundedSender<String>,
     roomid: u64,
     cookie: &str,
 ) -> FelgensResult<()> {
     let (write, read) = prepare(roomid, cookie).await?;
 
-    tokio::select!(v = send_heartbeat_packets(write) => v, v = recv_string(read, tx) => v)?;
+    tokio::select!(v = send_heartbeat_packets(write) => v, v = recv_raw(read, tx) => v)?;
 
     Ok(())
 }

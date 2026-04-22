@@ -2,9 +2,12 @@ mod dannmu_msg;
 mod interact_word;
 mod send_gift;
 mod super_chat;
+mod welcome_guard;
 
 use serde::Deserialize;
 use serde_json::Value;
+
+use crate::ws_type::welcome_guard::WelcomeGuard;
 
 pub use self::dannmu_msg::DanmuMessage;
 pub use self::interact_word::InteractWord;
@@ -38,6 +41,7 @@ pub struct WsStreamCtxData {
     combo_num: Option<u64>,
     gift_num: Option<u64>,
     combo_send: Box<Option<WsStreamCtxData>>,
+    guard_level: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -55,7 +59,7 @@ pub struct WsStreamCtxDataUser {
 #[derive(Debug)]
 pub enum WsStreamMessageType {
     DanmuMsg(DanmuMessage),
-    // WELCOME_GUARD,
+    WelcomeGuard(WelcomeGuard),
     // ENTRY_EFFECT,
     // WELCOME,
     // SUPER_CHAT_MESSAGE_JPN,
@@ -84,6 +88,8 @@ pub enum LiveMessageError {
     InteractWordError(WsStreamCtx),
     #[error("Can't get send gift message: {0:#?}")]
     SendGiftMessageError(WsStreamCtx),
+    #[error("Can't get welcome guard message: {0:#?}")]
+    WelcomeGuardError(WsStreamCtx),
     #[error("Unknown msg: {0:#?}")]
     UnknownMessage(WsStreamCtx),
 }
@@ -108,6 +114,9 @@ impl WsStreamCtx {
             }
             Some("SEND_GIFT") | Some("COMBO_SEND") => {
                 WsStreamMessageType::SendGift(SendGift::new_from_ctx(self)?)
+            }
+            Some("WELCOME_GUARD") => {
+                WsStreamMessageType::WelcomeGuard(WelcomeGuard::new_from_ctx(self)?)
             }
             _ => return Err(LiveMessageError::UnknownMessage(self.clone())),
         };

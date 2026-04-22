@@ -1,5 +1,5 @@
 use felgens::{
-    ws_socket_object, DanmuMessage, FelgensResult, InteractWord, SendGift,
+    ws_socket, DanmuMessage, FelgensResult, InteractWord, SendGift,
     SuperChatMessage, WsStreamMessageType,
 };
 use owo_colors::OwoColorize;
@@ -23,7 +23,7 @@ async fn main() {
 
     let cookie = std::env::var("FELGENS_COOKIE").unwrap();
 
-    let ws = ws_socket_object(tx, room_id, &cookie);
+    let ws = ws_socket(tx, room_id, &cookie);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);
@@ -37,6 +37,10 @@ async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> FelgensResult<(
             WsStreamMessageType::SuperChatMessage(msg) => print_sc(msg),
             WsStreamMessageType::InteractWord(msg) => print_interact_word(msg),
             WsStreamMessageType::SendGift(msg) => print_send_gift(msg),
+            WsStreamMessageType::WelcomeGuard(msg) => println!(
+                "[{}({})] {} 进入了直播间",
+                msg.username, msg.guard_level, msg.username
+            ),
         }
     }
 

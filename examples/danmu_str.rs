@@ -1,4 +1,4 @@
-use felgens::{FelgensResult, ws_socket_str};
+use felgens::{FelgensResult, ws_socket_raw};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 #[tokio::main]
@@ -11,7 +11,7 @@ async fn main() {
         .unwrap_or(22746343);
 
     let cookie = std::env::var("FELGENS_COOKIE").unwrap();
-    let ws = ws_socket_str(tx, room_id, &cookie);
+    let ws = ws_socket_raw(tx, room_id, &cookie);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);
