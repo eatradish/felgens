@@ -1,6 +1,7 @@
+use cookie_scoop::{get_cookies, GetCookiesOptions};
 use felgens::{
-    ws_socket, DanmuMessage, FelgensResult, InteractWord, SendGift,
-    SuperChatMessage, WsStreamMessageType,
+    ws_socket, DanmuMessage, FelgensResult, InteractWord, SendGift, SuperChatMessage,
+    WsStreamMessageType,
 };
 use owo_colors::OwoColorize;
 use std::fmt::Write;
@@ -21,7 +22,15 @@ async fn main() {
         .and_then(|x| x.parse::<u64>().ok())
         .unwrap_or(1961605007);
 
-    let cookie = std::env::var("FELGENS_COOKIE").unwrap();
+    let cookie = get_cookies(GetCookiesOptions::new("https://bilibili.com"))
+        .await
+        .cookies;
+
+    let cookie = cookie
+        .into_iter()
+        .map(|c| format!("{}={}", c.name, c.value))
+        .collect::<Vec<_>>()
+        .join("; ");
 
     let ws = ws_socket(tx, room_id, &cookie);
 
