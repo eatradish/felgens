@@ -17,6 +17,7 @@ use ws_type::WsStreamCtx;
 mod http_client;
 mod pack;
 mod ws_type;
+mod sign;
 
 type WsReadType = futures_util::stream::SplitStream<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,

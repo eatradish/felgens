@@ -19,7 +19,7 @@ async fn main() {
     let room_id = std::env::var("FELGENS_ROOMID")
         .ok()
         .and_then(|x| x.parse::<u64>().ok())
-        .unwrap_or(22746343);
+        .unwrap_or(1961605007);
 
     let ws = ws_socket_object(tx, room_id);
 

@@ -1,9 +1,9 @@
 use reqwest::{header::HeaderMap, Client, Response};
 use serde::Deserialize;
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 use url::Url;
 
-use crate::FelgensResult;
+use crate::{sign::sign_request, FelgensResult};
 
 pub struct HttpClient {
     client: Client,
@@ -64,9 +64,16 @@ impl HttpClient {
     }
 
     pub async fn get_dammu_info(&self, room_id: u64) -> FelgensResult<DanmuInfo> {
+        let mut params = BTreeMap::new();
+        params.insert("id".to_string(), room_id.to_string());
+        params.insert("type".to_string(), "0".to_string());
+        params.insert("web_location".to_string(), "444.8".to_string());
+
+        let sign = sign_request(params).await?;
+
         let resp = self
             .get(
-                &format!("xlive/web-room/v1/index/getDanmuInfo?id={}&type=0", room_id),
+                &format!("xlive/web-room/v1/index/getDanmuInfo?{}", sign),
                 None,
                 None,
             )
