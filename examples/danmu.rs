@@ -1,6 +1,6 @@
 use felgens::{
-    ws_socket_object, DanmuMessage, FelgensResult, InteractWord, SendGift, SuperChatMessage,
-    WsStreamMessageType,
+    ws_socket_object, DanmuMessage, FelgensResult, InteractWord, SendGift,
+    SuperChatMessage, WsStreamMessageType,
 };
 use owo_colors::OwoColorize;
 use std::fmt::Write;
@@ -21,7 +21,9 @@ async fn main() {
         .and_then(|x| x.parse::<u64>().ok())
         .unwrap_or(1961605007);
 
-    let ws = ws_socket_object(tx, room_id);
+    let cookie = std::env::var("FELGENS_COOKIE").unwrap();
+
+    let ws = ws_socket_object(tx, room_id, &cookie);
 
     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
         eprintln!("{}", e);

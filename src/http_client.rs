@@ -7,7 +7,8 @@ use crate::{sign::sign_request, FelgensResult};
 
 pub struct HttpClient {
     client: Client,
-    base_url: Url,
+    api_live_base_url: Url,
+    api_base_url: Url,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,15 +37,26 @@ pub struct RoomInitData {
     room_id: u64,
 }
 
+#[derive(Debug, Deserialize)]
+struct NavResponse {
+    data: NavData,
+}
+
+#[derive(Debug, Deserialize)]
+struct NavData {
+    mid: u64,
+}
+
 impl HttpClient {
     pub fn new() -> FelgensResult<Self> {
         Ok(Self {
             client: Client::new(),
-            base_url: Url::parse("https://api.live.bilibili.com")?,
+            api_live_base_url: Url::parse("https://api.live.bilibili.com")?,
+            api_base_url: Url::parse("https://api.bilibili.com")?,
         })
     }
 
-    async fn get(
+    async fn get_live(
         &self,
         path: &str,
         query: Option<&[(&str, &str)]>,
@@ -52,7 +64,7 @@ impl HttpClient {
     ) -> FelgensResult<Response> {
         let resp = self
             .client
-            .get(self.base_url.join(path)?)
+            .get(self.api_live_base_url.join(path)?)
             .query(query.unwrap_or_default())
             .headers(headers.unwrap_or_default())
             .timeout(Duration::from_secs(30))
@@ -63,7 +75,30 @@ impl HttpClient {
         Ok(resp)
     }
 
-    pub async fn get_dammu_info(&self, room_id: u64) -> FelgensResult<DanmuInfo> {
+    async fn get(
+        &self,
+        path: &str,
+        query: Option<&[(&str, &str)]>,
+        headers: Option<HeaderMap>,
+    ) -> FelgensResult<Response> {
+        let resp = self
+            .client
+            .get(self.api_base_url.join(path)?)
+            .query(query.unwrap_or_default())
+            .headers(headers.unwrap_or_default())
+            .timeout(Duration::from_secs(30))
+            .send()
+            .await?
+            .error_for_status()?;
+
+        Ok(resp)
+    }
+
+    pub async fn get_dammu_info(
+        &self,
+        room_id: u64,
+        headers: Option<HeaderMap>,
+    ) -> FelgensResult<DanmuInfo> {
         let mut params = BTreeMap::new();
         params.insert("id".to_string(), room_id.to_string());
         params.insert("type".to_string(), "0".to_string());
@@ -72,10 +107,10 @@ impl HttpClient {
         let sign = sign_request(params).await?;
 
         let resp = self
-            .get(
+            .get_live(
                 &format!("xlive/web-room/v1/index/getDanmuInfo?{}", sign),
                 None,
-                None,
+                headers,
             )
             .await?
             .json::<DanmuInfo>()
@@ -84,13 +119,23 @@ impl HttpClient {
         Ok(resp)
     }
 
+    pub async fn get_uid(&self, headers: HeaderMap) -> FelgensResult<u64> {
+        let resp = self
+            .get("x/web-interface/nav", None, Some(headers))
+            .await?
+            .json::<NavResponse>()
+            .await?;
+
+        Ok(resp.data.mid)
+    }
+
     pub async fn get_room_id(&self, room_id: u64) -> FelgensResult<u64> {
         if room_id > 1000 {
             return Ok(room_id);
         }
 
         let resp = self
-            .get(
+            .get_live(
                 &format!("room/v1/Room/room_init?id={}?&from=room", room_id),
                 None,
                 None,

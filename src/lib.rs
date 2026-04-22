@@ -1,9 +1,13 @@
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt, TryStreamExt};
+pub use reqwest::header::HeaderMap;
 use serde::Serialize;
 use tokio::{sync::mpsc, time::sleep};
-use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{handshake::headers, Message},
+};
 pub use ws_type::{
     DanmuMessage, InteractWord, LiveMessageError, LiveMessageResult, SendGift, SuperChatMessage,
     WsStreamMessageType,
@@ -16,8 +20,8 @@ use ws_type::WsStreamCtx;
 
 mod http_client;
 mod pack;
-mod ws_type;
 mod sign;
+mod ws_type;
 
 type WsReadType = futures_util::stream::SplitStream<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
@@ -60,7 +64,7 @@ pub type FelgensResult<T> = Result<T, FelgensError>;
 
 #[derive(Serialize)]
 struct WsSend {
-    // uid: u32,
+    uid: u32,
     roomid: u64,
     key: String,
     // protover: u32,
@@ -100,15 +104,19 @@ struct WsSend {
 pub async fn ws_socket_object(
     tx: mpsc::UnboundedSender<WsStreamMessageType>,
     roomid: u64,
+    cookie: &str,
 ) -> FelgensResult<()> {
-    let (write, read) = prepare(roomid).await?;
+    let (write, read) = prepare(roomid, cookie).await?;
 
     tokio::select!(v = send_heartbeat_packets(write) => v, v = recv(read, tx) => v)?;
 
     Ok(())
 }
 
-async fn recv(mut read: WsReadType, tx: mpsc::UnboundedSender<WsStreamMessageType>) -> FelgensResult<()> {
+async fn recv(
+    mut read: WsReadType,
+    tx: mpsc::UnboundedSender<WsStreamMessageType>,
+) -> FelgensResult<()> {
     while let Ok(Some(msg)) = read.try_next().await {
         let data = msg.into_data();
 
@@ -156,18 +164,45 @@ async fn recv_string(mut read: WsReadType, tx: mpsc::UnboundedSender<String>) ->
     Ok(())
 }
 
-pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64) -> FelgensResult<()> {
-    let (write, read) = prepare(roomid).await?;
+pub async fn ws_socket_str(tx: mpsc::UnboundedSender<String>, roomid: u64, cookie: &str) -> FelgensResult<()> {
+    let (write, read) = prepare(roomid, cookie).await?;
 
     tokio::select!(v = send_heartbeat_packets(write) => v, v = recv_string(read, tx) => v)?;
 
     Ok(())
 }
 
-async fn prepare(roomid: u64) -> FelgensResult<(WsWriteType, WsReadType)> {
+async fn prepare(roomid: u64, cookie: &str) -> FelgensResult<(WsWriteType, WsReadType)> {
     let client = HttpClient::new()?;
     let roomid = client.get_room_id(roomid).await?;
-    let dammu_info = client.get_dammu_info(roomid).await?.data;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        reqwest::header::COOKIE,
+        cookie.parse().expect("Failed to parse cookie!"),
+    );
+
+    // let sessdata = cookie
+    //     .split(';')
+    //     .find_map(|kv| {
+    //         let mut parts = kv.trim().splitn(2, '=');
+    //         let key = parts.next()?.trim();
+    //         let value = parts.next()?.trim();
+    //         if key == "SESSDATA" {
+    //             Some(value.to_string())
+    //         } else {
+    //             None
+    //         }
+    //     })
+    //     .unwrap_or_else(|| "".to_string());
+    
+    let uid = client.get_uid(headers.clone()).await? as u32;
+
+    // dbg!(uid);
+
+    // debug!("uid is: {}", uid);
+
+    let dammu_info = client.get_dammu_info(roomid, Some(headers)).await?.data;
     let key = dammu_info.token;
     let host_list = dammu_info.host_list;
     let mut con = None;
@@ -187,7 +222,8 @@ async fn prepare(roomid: u64) -> FelgensResult<(WsWriteType, WsReadType)> {
 
     let con = con.ok_or_else(|| FelgensError::FailedConnectWsHost)?;
     let (mut write, read) = con.split();
-    let json = serde_json::to_string(&WsSend { roomid, key })?;
+
+    let json = serde_json::to_string(&WsSend { roomid, key, uid })?;
 
     debug!("Websocket sending json: {}", json);
     let json = pack::encode(&json, 7);
@@ -198,9 +234,7 @@ async fn prepare(roomid: u64) -> FelgensResult<(WsWriteType, WsReadType)> {
 
 async fn send_heartbeat_packets(mut write: WsWriteType) -> FelgensResult<()> {
     loop {
-        write
-            .send(Message::binary(pack::encode("", 2)))
-            .await?;
+        write.send(Message::binary(pack::encode("", 2))).await?;
         debug!("Heartbeat packets have been sent!");
         sleep(Duration::from_secs(30)).await;
     }
