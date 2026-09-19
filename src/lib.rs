@@ -71,30 +71,33 @@ struct WsSend {
     // t: u32,
 }
 
-/// Init Bilibili websocket channel
-/// ```rust
-/// use anyhow::Result;
-/// use bililive::{ws_socket_object, WsStreamMessageType};
+/// Init Bilibili websocket channel (parsed messages).
+///
+/// `cookie` is the Cookie header from a logged-in browser (e.g. read with
+/// `cookie_scoop`); it is used to get your uid and to sign the danmu token request.
+///
+/// ```no_run
+/// use felgens::{FelgensResult, WsStreamMessageType, ws_socket};
 /// use tokio::sync::mpsc::{self, UnboundedReceiver};
-
+///
 /// #[tokio::main]
 /// async fn main() {
 ///     let (tx, rx) = mpsc::unbounded_channel();
-
-///     // bilibili live room id: 22746343
-
-///     let ws = ws_socket_object(tx, 5424);
-
+///
+///     // bilibili live room id (true id): 22746343
+///     let cookie = std::env::var("FELGENS_COOKIE").unwrap();
+///     let ws = ws_socket(tx, 22746343, &cookie);
+///
 ///     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
 ///         eprintln!("{}", e);
 ///     }
 /// }
-
-/// async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> Result<()> {
+///
+/// async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> FelgensResult<()> {
 ///     while let Some(msg) = rx.recv().await {
 ///         println!("{:?}", msg);
 ///     }
-
+///
 ///     Ok(())
 /// }
 /// ```
@@ -161,6 +164,34 @@ async fn recv_raw(mut read: WsReadType, tx: mpsc::UnboundedSender<String>) -> Fe
     Ok(())
 }
 
+/// Like [`ws_socket`], but forwards every message as its raw JSON string.
+///
+/// Handy when you only care about a few message types (e.g. red packet
+/// broadcasts) and want to parse them yourself.
+///
+/// ```no_run
+/// use tokio::sync::mpsc;
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let (tx, rx) = mpsc::unbounded_channel::<String>();
+///
+///     let cookie = std::env::var("FELGENS_COOKIE").unwrap();
+///     let ws = felgens::ws_socket_raw(tx, 22746343, &cookie);
+///
+///     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
+///         eprintln!("{}", e);
+///     }
+/// }
+///
+/// async fn recv(mut rx: mpsc::UnboundedReceiver<String>) -> felgens::FelgensResult<()> {
+///     while let Some(raw) = rx.recv().await {
+///         println!("{}", raw);
+///     }
+///
+///     Ok(())
+/// }
+/// ```
 pub async fn ws_socket_raw(
     tx: mpsc::UnboundedSender<String>,
     roomid: u64,

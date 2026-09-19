@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.4.0 (2026-09-19)
+
+### Breaking Changes
+
+ - `ws_socket` now takes a `cookie` parameter; the danmu token request is signed with WBI.
+ - `ws_socket_object` is replaced by `ws_socket` (parsed messages); `ws_socket_str` is replaced by `ws_socket_raw` (raw JSON strings).
+
+### New Features
+
+ - support login with cookie (uid from `nav`, WBI-signed `getDanmuInfo`)
+ - add `ws_socket_raw`: forward every message as raw JSON over a `String` channel
+ - parse `WELCOME_GUARD` messages; keep unknown fields with `serde(flatten)`
+ - improved error handling (`FelgensError`)
+
+### Fixes
+
+ - fix `get_danmu_info` request (WBI signing, cookie headers)
+
+### Other
+
+ - refactor internals; update all dependencies; lint with clippy and fmt
+
 ## v0.3.1 (2023-03-26)
 
 ### Other
