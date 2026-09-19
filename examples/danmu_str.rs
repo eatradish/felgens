@@ -1,27 +1,27 @@
-use felgens::{FelgensResult, ws_socket_raw};
-use tokio::sync::mpsc::{self, UnboundedReceiver};
+use felgens::raw_stream;
+use futures_util::StreamExt;
 
 #[tokio::main]
 async fn main() {
-    let (tx, rx) = mpsc::unbounded_channel();
-
     let room_id = std::env::var("FELGENS_ROOMID")
         .ok()
         .and_then(|x| x.parse::<u64>().ok())
         .unwrap_or(22746343);
 
     let cookie = std::env::var("FELGENS_COOKIE").unwrap();
-    let ws = ws_socket_raw(tx, room_id, &cookie);
 
-    if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
-        eprintln!("{}", e);
+    let mut messages = match raw_stream(room_id, &cookie).await {
+        Ok(messages) => messages,
+        Err(e) => {
+            eprintln!("{}", e);
+            return;
+        }
+    };
+
+    while let Some(raw) = messages.next().await {
+        match raw {
+            Ok(raw) => println!("{}", raw),
+            Err(e) => eprintln!("{}", e),
+        }
     }
-}
-
-async fn recv(mut rx: UnboundedReceiver<String>) -> FelgensResult<()> {
-    while let Some(msg) = rx.recv().await {
-        println!("{}", msg);
-    }
-
-    Ok(())
 }

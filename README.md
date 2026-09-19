@@ -7,33 +7,27 @@ Bilibili live danmu websocket library
 ## Usage
 
 ```rust
-use felgens::{FelgensResult, WsStreamMessageType, ws_socket};
-use tokio::sync::mpsc::{self, UnboundedReceiver};
+use felgens::{stream, WsStreamMessageType};
+use futures_util::StreamExt;
 
 #[tokio::main]
 async fn main() {
-   let (tx, rx) = mpsc::unbounded_channel();
-
    // bilibili live room id (true id): 22746343
    // cookie from a logged-in browser (needs SESSDATA; cookie_scoop works well)
    let cookie = std::env::var("FELGENS_COOKIE").unwrap();
-   let ws = ws_socket(tx, 22746343, &cookie);
 
-   if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
-       eprintln!("{}", e);
+   let mut messages = stream(22746343, &cookie).await.unwrap();
+   while let Some(message) = messages.next().await {
+       match message {
+           Ok(WsStreamMessageType::DanmuMsg(danmu)) => println!("{}", danmu.msg),
+           Ok(_) => {}
+           Err(e) => eprintln!("read error: {e}"),
+       }
    }
-}
-
-async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> FelgensResult<()> {
-   while let Some(msg) = rx.recv().await {
-       println!("{:?}", msg);
-   }
-
-   Ok(())
 }
 ```
 
-Need raw JSON instead of parsed messages? Use `ws_socket_raw` (see `examples/danmu_str.rs`).
+Need raw JSON instead of parsed messages? Use `raw_stream` (see `examples/danmu_str.rs`).
 
 Or run `cargo run --example danmu`
 

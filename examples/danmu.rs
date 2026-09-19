@@ -1,11 +1,10 @@
 use cookie_scoop::{get_cookies, GetCookiesOptions};
 use felgens::{
-    ws_socket, DanmuMessage, FelgensResult, InteractWord, SendGift, SuperChatMessage,
-    WsStreamMessageType,
+    stream, DanmuMessage, InteractWord, SendGift, SuperChatMessage, WsStreamMessageType,
 };
+use futures_util::StreamExt;
 use owo_colors::OwoColorize;
 use std::fmt::Write;
-use tokio::sync::mpsc::{self, UnboundedReceiver};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[tokio::main]
@@ -14,8 +13,6 @@ async fn main() {
         .with(fmt::layer())
         .with(EnvFilter::from_default_env())
         .init();
-
-    let (tx, rx) = mpsc::unbounded_channel();
 
     let room_id = std::env::var("FELGENS_ROOMID")
         .ok()
@@ -32,28 +29,33 @@ async fn main() {
         .collect::<Vec<_>>()
         .join("; ");
 
-    let ws = ws_socket(tx, room_id, &cookie);
+    let mut messages = match stream(room_id, &cookie).await {
+        Ok(messages) => messages,
+        Err(e) => {
+            eprintln!("{}", e);
+            return;
+        }
+    };
 
-    if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
-        eprintln!("{}", e);
+    while let Some(message) = messages.next().await {
+        match message {
+            Ok(message) => print_message(message),
+            Err(e) => eprintln!("{}", e),
+        }
     }
 }
 
-async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> FelgensResult<()> {
-    while let Some(msg) = rx.recv().await {
-        match msg {
-            WsStreamMessageType::DanmuMsg(msg) => print_danmu_msg(msg),
-            WsStreamMessageType::SuperChatMessage(msg) => print_sc(msg),
-            WsStreamMessageType::InteractWord(msg) => print_interact_word(msg),
-            WsStreamMessageType::SendGift(msg) => print_send_gift(msg),
-            WsStreamMessageType::WelcomeGuard(msg) => println!(
-                "[{}({})] {} 进入了直播间",
-                msg.username, msg.guard_level, msg.username
-            ),
-        }
+fn print_message(msg: WsStreamMessageType) {
+    match msg {
+        WsStreamMessageType::DanmuMsg(msg) => print_danmu_msg(msg),
+        WsStreamMessageType::SuperChatMessage(msg) => print_sc(msg),
+        WsStreamMessageType::InteractWord(msg) => print_interact_word(msg),
+        WsStreamMessageType::SendGift(msg) => print_send_gift(msg),
+        WsStreamMessageType::WelcomeGuard(msg) => println!(
+            "[{}({})] {} 进入了直播间",
+            msg.username, msg.guard_level, msg.username
+        ),
     }
-
-    Ok(())
 }
 
 fn print_danmu_msg(msg: DanmuMessage) {

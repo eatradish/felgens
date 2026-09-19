@@ -1,16 +1,17 @@
 use std::time::Duration;
 
-use futures_util::{SinkExt, StreamExt, TryStreamExt};
+use futures_util::{future, stream, SinkExt, Stream, StreamExt, TryStreamExt};
 use reqwest::header::HeaderMap;
 use serde::Serialize;
-use tokio::{sync::mpsc, time::sleep};
+use tokio::task::JoinHandle;
+use tokio::time::sleep;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 pub use ws_type::{
     DanmuMessage, InteractWord, LiveMessageError, LiveMessageResult, SendGift, SuperChatMessage,
     WsStreamMessageType,
 };
 
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 
 use crate::{http_client::HttpClient, pack::build_pack};
 use ws_type::WsStreamCtx;
@@ -51,10 +52,6 @@ pub enum FelgensError {
     UnsupportProto(String),
     #[error(transparent)]
     Utf8Error(#[from] std::str::Utf8Error),
-    #[error(transparent)]
-    WsStreamMessageTypeSendError(#[from] tokio::sync::mpsc::error::SendError<WsStreamMessageType>),
-    #[error(transparent)]
-    StringSendError(#[from] tokio::sync::mpsc::error::SendError<String>),
 }
 
 pub type FelgensResult<T> = Result<T, FelgensError>;
@@ -71,137 +68,129 @@ struct WsSend {
     // t: u32,
 }
 
-/// Init Bilibili websocket channel (parsed messages).
+/// 连上弹幕服务器并完成鉴权，返回解析好的消息流。
 ///
-/// `cookie` is the Cookie header from a logged-in browser (e.g. read with
-/// `cookie_scoop`); it is used to get your uid and to sign the danmu token request.
+/// `cookie` 是登录浏览器里的 Cookie（`cookie_scoop` 读出来就行）：取 uid、签名弹幕
+/// 口令都要用它。连接/鉴权失败会直接返回 `Err`；连上之后的读取错误以流里的 `Err` 项
+/// 出现，服务端正常断开就是流结束（`None`）。流被 drop 时连接和心跳一起停掉。
 ///
 /// ```no_run
-/// use felgens::{FelgensResult, WsStreamMessageType, ws_socket};
-/// use tokio::sync::mpsc::{self, UnboundedReceiver};
+/// use felgens::{stream, WsStreamMessageType};
+/// use futures_util::StreamExt;
 ///
 /// #[tokio::main]
 /// async fn main() {
-///     let (tx, rx) = mpsc::unbounded_channel();
-///
-///     // bilibili live room id (true id): 22746343
 ///     let cookie = std::env::var("FELGENS_COOKIE").unwrap();
-///     let ws = ws_socket(tx, 22746343, &cookie);
+///     let mut messages = stream(22746343, &cookie).await.unwrap();
 ///
-///     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
-///         eprintln!("{}", e);
+///     while let Some(message) = messages.next().await {
+///         match message {
+///             Ok(WsStreamMessageType::DanmuMsg(danmu)) => println!("{}", danmu.msg),
+///             Ok(_) => {}
+///             Err(e) => eprintln!("read error: {e}"),
+///         }
 ///     }
-/// }
-///
-/// async fn recv(mut rx: UnboundedReceiver<WsStreamMessageType>) -> FelgensResult<()> {
-///     while let Some(msg) = rx.recv().await {
-///         println!("{:?}", msg);
-///     }
-///
-///     Ok(())
 /// }
 /// ```
-pub async fn ws_socket(
-    tx: mpsc::UnboundedSender<WsStreamMessageType>,
+pub async fn stream(
     roomid: u64,
     cookie: &str,
-) -> FelgensResult<()> {
+) -> FelgensResult<impl Stream<Item = FelgensResult<WsStreamMessageType>> + Send> {
     let (write, read) = prepare(roomid, cookie).await?;
-
-    tokio::select!(v = send_heartbeat_packets(write) => v, v = recv(read, tx) => v)?;
-
-    Ok(())
+    let messages = frame_stream(read)
+        .and_then(|message| future::ready(Ok(typed_messages_of(message))))
+        .map_ok(|items| stream::iter(items.into_iter().map(Ok)))
+        .try_flatten();
+    Ok(with_heartbeat(messages, write))
 }
 
-async fn recv(
-    mut read: WsReadType,
-    tx: mpsc::UnboundedSender<WsStreamMessageType>,
-) -> FelgensResult<()> {
-    while let Ok(Some(msg)) = read.try_next().await {
-        let data = msg.into_data();
-
-        if !data.is_empty() {
-            let s = build_pack(&data);
-
-            if let Ok(msgs) = s {
-                for i in msgs {
-                    let ws = WsStreamCtx::new(&i);
-                    if let Ok(ws) = ws {
-                        match ws.match_msg() {
-                            Ok(v) => tx.send(v)?,
-                            Err(e) => {
-                                warn!(
-                                    "This message parsing is not yet supported:\nMessage: {i}\nErr: {e:#?}"
-                                );
-                            }
-                        }
-                    } else {
-                        error!("{}", ws.unwrap_err());
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-async fn recv_raw(mut read: WsReadType, tx: mpsc::UnboundedSender<String>) -> FelgensResult<()> {
-    while let Ok(Some(msg)) = read.try_next().await {
-        let data = msg.into_data();
-
-        if !data.is_empty() {
-            let s = build_pack(&data);
-
-            if let Ok(msgs) = s {
-                for i in msgs {
-                    tx.send(i)?;
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Like [`ws_socket`], but forwards every message as its raw JSON string.
+/// 同 [`stream`]，但每条消息是原始 JSON 字符串。
 ///
-/// Handy when you only care about a few message types (e.g. red packet
-/// broadcasts) and want to parse them yourself.
+/// 只关心少数几种消息（比如红包广播）想自己解析时用它更省事。
 ///
 /// ```no_run
-/// use tokio::sync::mpsc;
+/// use felgens::raw_stream;
+/// use futures_util::StreamExt;
 ///
 /// #[tokio::main]
 /// async fn main() {
-///     let (tx, rx) = mpsc::unbounded_channel::<String>();
-///
 ///     let cookie = std::env::var("FELGENS_COOKIE").unwrap();
-///     let ws = felgens::ws_socket_raw(tx, 22746343, &cookie);
+///     let mut messages = raw_stream(22746343, &cookie).await.unwrap();
 ///
-///     if let Err(e) = tokio::select! {v = ws => v, v = recv(rx) => v} {
-///         eprintln!("{}", e);
+///     while let Some(raw) = messages.next().await {
+///         match raw {
+///             Ok(raw) => println!("{}", raw),
+///             Err(e) => eprintln!("read error: {e}"),
+///         }
 ///     }
-/// }
-///
-/// async fn recv(mut rx: mpsc::UnboundedReceiver<String>) -> felgens::FelgensResult<()> {
-///     while let Some(raw) = rx.recv().await {
-///         println!("{}", raw);
-///     }
-///
-///     Ok(())
 /// }
 /// ```
-pub async fn ws_socket_raw(
-    tx: mpsc::UnboundedSender<String>,
+pub async fn raw_stream(
     roomid: u64,
     cookie: &str,
-) -> FelgensResult<()> {
+) -> FelgensResult<impl Stream<Item = FelgensResult<String>> + Send> {
     let (write, read) = prepare(roomid, cookie).await?;
+    let messages = frame_stream(read)
+        .and_then(|message| future::ready(Ok(raw_messages_of(message))))
+        .map_ok(|items| stream::iter(items.into_iter().map(Ok)))
+        .try_flatten();
+    Ok(with_heartbeat(messages, write))
+}
 
-    tokio::select!(v = send_heartbeat_packets(write) => v, v = recv_raw(read, tx) => v)?;
+/// 把 WebSocket 的消息帧流统一成 [`FelgensError`] 错误。
+fn frame_stream(read: WsReadType) -> impl Stream<Item = FelgensResult<Message>> + Send {
+    read.map_err(FelgensError::from)
+}
 
-    Ok(())
+/// 一帧数据 → 若干条原始 JSON（解不开就一条也不给）。
+fn raw_messages_of(message: Message) -> Vec<String> {
+    let data = message.into_data();
+    if data.is_empty() {
+        return Vec::new();
+    }
+    build_pack(&data).unwrap_or_default()
+}
+
+/// 一帧数据 → 若干条解析好的消息；不认识的 cmd 只记 debug，跳过。
+fn typed_messages_of(message: Message) -> Vec<WsStreamMessageType> {
+    let mut messages = Vec::new();
+    for raw in raw_messages_of(message) {
+        match WsStreamCtx::new(&raw).and_then(|ctx| ctx.match_msg()) {
+            Ok(message) => messages.push(message),
+            Err(e) => debug!("skipping message: {e}"),
+        }
+    }
+    messages
+}
+
+/// 给消息流挂上后台心跳任务。
+///
+/// 写半边交给任务每 30 秒打一次心跳；任务句柄藏在流里——流活着任务就活着，
+/// 流被 drop 时任务一起停掉。
+fn with_heartbeat<S>(stream: S, write: WsWriteType) -> impl Stream<Item = S::Item> + Send
+where
+    S: Stream + Send,
+{
+    let heartbeat = Heartbeat(tokio::spawn(async move {
+        if let Err(e) = send_heartbeat_packets(write).await {
+            debug!("heartbeat task stopped: {e}");
+        }
+    }));
+
+    stream.map(move |item| {
+        // 占住句柄，别让它提前掉了
+        let _ = &heartbeat;
+        item
+    })
+}
+
+/// 心跳任务的句柄：被 drop（流结束/丢弃）时把任务一起停掉。
+struct Heartbeat(JoinHandle<()>);
+
+impl Drop for Heartbeat {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
 }
 
 async fn prepare(roomid: u64, cookie: &str) -> FelgensResult<(WsWriteType, WsReadType)> {

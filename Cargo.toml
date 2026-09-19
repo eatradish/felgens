@@ -1,6 +1,6 @@
 [package]
 name = "felgens"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Bilibili live danmu websocket library"
 license = "MIT"

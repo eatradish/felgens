@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.0 (2026-09-20)
+
+### Breaking Changes
+
+ - `ws_socket` / `ws_socket_raw` are replaced by `stream` / `raw_stream`: they return a `Stream` of messages instead of taking a channel. Connect errors come from `await`, read errors arrive as `Err` items, a clean close ends the stream, and dropping the stream cancels the connection.
+ - `FelgensError` drops the mpsc-send variants that are no longer needed.
+
+### New Features
+
+ - the heartbeat runs in a background task and stops automatically when the stream is dropped
+
+### Other
+
+ - unsupported message types are skipped with a `debug!` log instead of `warn!` (busy rooms were very noisy)
+ - examples, README and API docs updated to the stream API
+
 ## v0.4.0 (2026-09-19)
 
 ### Breaking Changes
