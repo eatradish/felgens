@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.6.0 (2026-09-20)
+
+### New Features
+
+ - `ticket()` returns a reusable `Ticket` (uid + auth token + server list), and
+   `Ticket::stream()` / `Ticket::raw_stream()` connect with it: reconnects no longer
+   re-request `nav` and `getDanmuInfo`. The token is bound to one room (a token from
+   room A is rejected for room B), but a single ticket serves every reconnect of its
+   room; fetch a fresh one when the auth is refused (e.g. `-101` token expired).
+
+### Fixes
+
+ - the auth reply (`op=8`) is now checked while connecting: a non-zero `code` returns
+   the new `FelgensError::AuthFailed { code, message }`, a missing reply returns
+   `FelgensError::AuthTimeout` — previously the reply was mis-decoded as a popularity
+   packet and leaked into the stream.
+ - `Ticket`'s `Debug` output redacts the token.
+
+### Other
+
+ - `stream()` / `raw_stream()` keep their signatures and are now `ticket()` + connect
+   underneath.
+
 ## v0.5.2 (2026-09-20)
 
 ### Fixes

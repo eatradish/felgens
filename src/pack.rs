@@ -11,7 +11,7 @@ struct BilibiliPackHeader {
     pack_len: u32,
     _header_len: u16,
     ver: u16,
-    _op: u32,
+    op: u32,
     _seq: u32,
 }
 
@@ -57,6 +57,19 @@ pub fn build_pack(buf: &[u8]) -> FelgensResult<Vec<String>> {
     let msgs = decode(ctx)?;
 
     Ok(msgs)
+}
+
+/// 认证回复（`op=8`）的包体：`{"code":0}` 是通过，其它 code（比如 token 过期的
+/// `-101`）就是被拒。不是认证回复的帧给 `None`。
+pub fn auth_reply_body(buf: &[u8]) -> FelgensResult<Option<&str>> {
+    let (header, body) = pack(buf)?;
+    if header.op != 8 {
+        return Ok(None);
+    }
+
+    // 按包头里的总长截，别把后面的包也吃进来
+    let len = (header.pack_len as usize).saturating_sub(16).min(body.len());
+    Ok(Some(std::str::from_utf8(&body[..len])?))
 }
 
 fn get_hot_count(body: &[u8]) -> FelgensResult<u32> {
