@@ -44,6 +44,12 @@ pub enum FelgensError {
     LiveMessageError(#[from] Box<LiveMessageError>),
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
+    #[error("接口 {what} 返回 code={code}：{message}")]
+    ApiError {
+        what: String,
+        code: i64,
+        message: String,
+    },
     #[error(transparent)]
     ScrollError(#[from] scroll::Error),
     #[error(transparent)]

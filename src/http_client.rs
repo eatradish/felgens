@@ -3,7 +3,7 @@ use serde::Deserialize;
 use std::{collections::BTreeMap, time::Duration};
 use url::Url;
 
-use crate::{sign::sign_request, FelgensResult};
+use crate::{sign::sign_request, FelgensError, FelgensResult};
 
 pub struct HttpClient {
     client: Client,
@@ -28,18 +28,8 @@ pub struct WsHost {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RoomInit {
-    data: RoomInitData,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct RoomInitData {
     room_id: u64,
-}
-
-#[derive(Debug, Deserialize)]
-struct NavResponse {
-    data: NavData,
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,6 +42,49 @@ struct NavData {
 struct WbiImg {
     img_url: String,
     sub_url: String,
+}
+
+/// 接口应答的通用外壳：先看 `code` 再看 `data`。
+///
+/// 风控（-352 之类）错误的响应里没有 `data`，直接按具体结构体解析只会得到
+/// 「missing field `data`」这种看不懂的报错；先过这一层就能报出 code 和人话。
+#[derive(Debug, Deserialize)]
+struct ApiEnvelope<T> {
+    code: i64,
+    #[serde(alias = "msg")]
+    message: Option<String>,
+    data: Option<T>,
+}
+
+impl<T> ApiEnvelope<T> {
+    /// `code != 0`（或没有 `data`）都给出人话错误；正常时把 data 拆出来。
+    fn into_data(self, what: &'static str) -> FelgensResult<T> {
+        if self.code != 0 {
+            let message = self
+                .message
+                .filter(|text| !text.is_empty())
+                .unwrap_or_else(|| "服务端没有给说明".to_string());
+            return Err(FelgensError::ApiError {
+                what: what.to_string(),
+                code: self.code,
+                message,
+            });
+        }
+
+        self.data.ok_or_else(|| FelgensError::ApiError {
+            what: what.to_string(),
+            code: self.code,
+            message: "响应里没有 data".to_string(),
+        })
+    }
+}
+
+/// 解一份接口应答：错误包会被拦成带 code 的人话错误。
+async fn decode_api<T: serde::de::DeserializeOwned>(
+    resp: Response,
+    what: &'static str,
+) -> FelgensResult<T> {
+    resp.json::<ApiEnvelope<T>>().await?.into_data(what)
 }
 
 impl HttpClient {
@@ -119,19 +152,15 @@ impl HttpClient {
                 None,
                 Some(headers),
             )
-            .await?
-            .json::<DanmuInfo>()
             .await?;
+        let data = decode_api::<DanmuInfoData>(resp, "getDanmuInfo").await?;
 
-        Ok(resp)
+        Ok(DanmuInfo { data })
     }
 
     pub async fn get_nav(&self, headers: HeaderMap) -> FelgensResult<(String, String, u64)> {
-        let resp = self
-            .get("x/web-interface/nav", None, Some(headers))
-            .await?
-            .json::<NavResponse>()
-            .await?;
+        let resp = self.get("x/web-interface/nav", None, Some(headers)).await?;
+        let data = decode_api::<NavData>(resp, "nav").await?;
 
         let extract_key = |url: &str| {
             url.split('/')
@@ -142,9 +171,9 @@ impl HttpClient {
         };
 
         Ok((
-            extract_key(&resp.data.wbi_img.img_url),
-            extract_key(&resp.data.wbi_img.sub_url),
-            resp.data.mid,
+            extract_key(&data.wbi_img.img_url),
+            extract_key(&data.wbi_img.sub_url),
+            data.mid,
         ))
     }
 
@@ -159,12 +188,50 @@ impl HttpClient {
                 None,
                 None,
             )
-            .await?
-            .json::<RoomInit>()
-            .await?
-            .data
-            .room_id;
+            .await?;
+        let data = decode_api::<RoomInitData>(resp, "room_init").await?;
 
-        Ok(resp)
+        Ok(data.room_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn api_error_reports_code_and_message() {
+        // 风控错误包：以前会被报成 missing field `data`
+        let raw = r#"{"code":-352,"message":"风控校验失败","ttl":1}"#;
+        let envelope: ApiEnvelope<NavData> = serde_json::from_str(raw).unwrap();
+        let err = envelope.into_data("nav").unwrap_err();
+        let text = err.to_string();
+        assert!(text.contains("nav"));
+        assert!(text.contains("-352"));
+        assert!(text.contains("风控校验失败"));
+    }
+
+    #[test]
+    fn api_error_tolerates_msg_field() {
+        let raw = r#"{"code":-101,"msg":"账号未登录"}"#;
+        let envelope: ApiEnvelope<RoomInitData> = serde_json::from_str(raw).unwrap();
+        let err = envelope.into_data("room_init").unwrap_err();
+        assert!(err.to_string().contains("账号未登录"));
+    }
+
+    #[test]
+    fn api_ok_takes_data() {
+        let raw = r#"{"code":0,"data":{"mid":42,"wbi_img":{"img_url":"https://x/img123.png","sub_url":"https://x/sub456.png"}}}"#;
+        let envelope: ApiEnvelope<NavData> = serde_json::from_str(raw).unwrap();
+        let data = envelope.into_data("nav").unwrap();
+        assert_eq!(data.mid, 42);
+    }
+
+    #[test]
+    fn api_code_zero_without_data_is_still_an_error() {
+        let raw = r#"{"code":0,"msg":"ok"}"#;
+        let envelope: ApiEnvelope<RoomInitData> = serde_json::from_str(raw).unwrap();
+        let err = envelope.into_data("room_init").unwrap_err();
+        assert!(err.to_string().contains("没有 data"));
     }
 }
