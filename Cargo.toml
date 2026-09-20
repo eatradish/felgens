@@ -1,6 +1,6 @@
 [package]
 name = "felgens"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2021"
 description = "Bilibili live danmu websocket library"
 license = "MIT"
@@ -12,6 +12,7 @@ repository = "https://github.com/eatradish/felgens"
 
 [dependencies]
 flate2 = { version = "1.0", features = ["zlib"], default-features = false }
+faster-hex = "0.10"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.19", features = [
