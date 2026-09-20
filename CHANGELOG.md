@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.7.0 (2026-09-20)
+
+### Breaking Changes
+
+ - Dependency refresh: `tokio-tungstenite` 0.19 → 0.30, `reqwest` 0.11 → 0.13,
+   `md-5` 0.10 → 0.11. `FelgensError` carries the new error types, so downstream
+   code that names them needs the matching crate versions.
+
+### Other
+
+ - `scroll` 0.11 → 0.13, `brotli` 3.3 → 9, `thiserror` 1 → 2, `owo-colors`
+   (dev) 3.5 → 4.
+ - `reqwest` now requests `json` + `query` + `native-tls` explicitly instead of
+   relying on default features (TLS backend unchanged).
+
 ## v0.6.1 (2026-09-20)
 
 ### New Features

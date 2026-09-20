@@ -53,9 +53,20 @@ pub fn enc_wbi(mut params: BTreeMap<String, String>, img_key: &str, sub_key: &st
     // 计算 MD5 签名 (w_rid)
     let mut hasher = Md5::new();
     hasher.update(format!("{}{}", filtered_query, mixin_key).as_bytes());
-    let w_rid = format!("{:x}", hasher.finalize());
+    let w_rid = hex(hasher.finalize().as_slice());
 
     format!("{}&w_rid={}", filtered_query, w_rid)
+}
+
+/// 小写十六进制（digest 的输出数组不带格式化实现，自己转）。
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write as _;
+
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let _ = write!(out, "{byte:02x}");
+    }
+    out
 }
 
 /// 获取最新的 img_key 和 sub_key

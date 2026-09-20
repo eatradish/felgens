@@ -1,6 +1,6 @@
 [package]
 name = "felgens"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 description = "Bilibili live danmu websocket library"
 license = "MIT"
@@ -22,23 +22,27 @@ tokio = { version = "1.19", features = [
     "io-std",
     "time",
 ] }
-tokio-tungstenite = { version = "0.19", features = ["connect", "native-tls"] }
+tokio-tungstenite = { version = "0.30", features = ["connect", "native-tls"] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",
 ] }
-scroll = "0.11"
-scroll_derive = "0.11"
-reqwest = { version = "0.11", features = ["json"] }
-brotli = "3.3"
+scroll = "0.13"
+scroll_derive = "0.13"
+reqwest = { version = "0.13", default-features = false, features = [
+    "json",
+    "query",
+    "native-tls",
+] }
+brotli = "9"
 log = "0.4"
-thiserror = "1.0"
+thiserror = "2.0"
 url = "2.3"
-md-5 = "0.10"
+md-5 = "0.11"
 urlencoding = "2"
 
 [dev-dependencies]
-owo-colors = "3.5"
+owo-colors = "4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "std"] }
 cookie-scoop = "0.1"
