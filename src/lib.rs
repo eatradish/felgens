@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use futures_util::{future, stream, SinkExt, Stream, StreamExt, TryStreamExt};
 use reqwest::header::HeaderMap;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
@@ -146,7 +146,10 @@ pub async fn raw_stream(
 /// 所以一份凭据只对应一间房；但同一间房里它管得很久——重连、换服务器都不用再走
 /// `nav` + `getDanmuInfo`。token 终究会过期，那时认证会报
 /// [`FelgensError::AuthFailed`]（比如 code `-101`），丢掉重取一份即可。
-#[derive(Clone)]
+///
+/// 可以序列化（`Serialize`/`Deserialize`）：调用方想把这凭据存到本地、
+/// 重启后接着用都行（token 是凭据，存的时候自己注意文件权限）。
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Ticket {
     roomid: u64,
     uid: u64,
