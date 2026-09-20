@@ -57,25 +57,25 @@ struct ApiEnvelope<T> {
 }
 
 impl<T> ApiEnvelope<T> {
-    /// `code != 0`（或没有 `data`）都给出人话错误；正常时把 data 拆出来。
+    /// 把 `data` 拆出来；没有 `data` 就报出带 `code` 的人话错误。
+    ///
+    /// `code != 0` 但带着 `data` 的应答（比如未登录时 `nav` 的 -101）照旧放行——
+    /// 这一版只把「看不懂的报错」换成人话，不改任何原来能跑通的情况。
     fn into_data(self, what: &'static str) -> FelgensResult<T> {
-        if self.code != 0 {
-            let message = self
-                .message
-                .filter(|text| !text.is_empty())
-                .unwrap_or_else(|| "服务端没有给说明".to_string());
-            return Err(FelgensError::ApiError {
-                what: what.to_string(),
-                code: self.code,
-                message,
-            });
+        match self.data {
+            Some(data) => Ok(data),
+            None => {
+                let message = self
+                    .message
+                    .filter(|text| !text.is_empty())
+                    .unwrap_or_else(|| "响应里没有 data".to_string());
+                Err(FelgensError::ApiError {
+                    what: what.to_string(),
+                    code: self.code,
+                    message,
+                })
+            }
         }
-
-        self.data.ok_or_else(|| FelgensError::ApiError {
-            what: what.to_string(),
-            code: self.code,
-            message: "响应里没有 data".to_string(),
-        })
     }
 }
 
@@ -228,8 +228,17 @@ mod tests {
     }
 
     #[test]
+    fn api_error_with_data_still_proceeds() {
+        // 未登录时 nav 会给 code=-101 但带着 WBI 钥匙：老样子照用，别拦
+        let raw = r#"{"code":-101,"message":"账号未登录","data":{"mid":0,"wbi_img":{"img_url":"https://x/img123.png","sub_url":"https://x/sub456.png"}}}"#;
+        let envelope: ApiEnvelope<NavData> = serde_json::from_str(raw).unwrap();
+        let data = envelope.into_data("nav").unwrap();
+        assert_eq!(data.mid, 0);
+    }
+
+    #[test]
     fn api_code_zero_without_data_is_still_an_error() {
-        let raw = r#"{"code":0,"msg":"ok"}"#;
+        let raw = r#"{"code":0}"#;
         let envelope: ApiEnvelope<RoomInitData> = serde_json::from_str(raw).unwrap();
         let err = envelope.into_data("room_init").unwrap_err();
         assert!(err.to_string().contains("没有 data"));
