@@ -33,6 +33,7 @@ scroll_derive = "0.13"
 reqwest = { version = "0.13", default-features = false, features = [
     "json",
     "query",
+    "form",
     "native-tls",
 ] }
 brotli = "9"

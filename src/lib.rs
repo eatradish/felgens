@@ -54,6 +54,8 @@ pub enum FelgensError {
         code: i64,
         message: String,
     },
+    #[error("cookie is missing bili_jct (csrf token), which is required to send a danmaku")]
+    MissingCsrf,
     #[error(transparent)]
     ScrollError(#[from] scroll::Error),
     #[error(transparent)]
@@ -244,6 +246,26 @@ pub async fn ticket(roomid: u64, cookie: &str) -> FelgensResult<Ticket> {
             .map(|host| host.host)
             .collect(),
     })
+}
+
+/// Send a danmaku (live chat message) to a room.
+///
+/// Sending goes over the HTTP `msg/send` endpoint, which is separate from the
+/// WebSocket used to receive messages: it only needs a logged-in cookie (with
+/// `SESSDATA` and `bili_jct`), no [`Ticket`].
+///
+/// ```no_run
+/// #[tokio::main]
+/// async fn main() {
+///     let cookie = std::env::var("FELGENS_COOKIE").unwrap();
+///     felgens::send_danmaku(22746343, &cookie, "hello").await.unwrap();
+/// }
+/// ```
+pub async fn send_danmaku(roomid: u64, cookie: &str, msg: &str) -> FelgensResult<()> {
+    let client = HttpClient::new()?;
+    let roomid = client.get_room_id(roomid).await?;
+
+    client.send_danmaku(roomid, msg, cookie).await
 }
 
 /// 把 WebSocket 的消息帧流统一成 [`FelgensError`] 错误。
