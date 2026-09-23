@@ -1,6 +1,9 @@
 use reqwest::{header::HeaderMap, Client, Response};
 use serde::Deserialize;
-use std::{collections::BTreeMap, time::Duration};
+use std::{
+    collections::BTreeMap,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use url::Url;
 
 use crate::{sign::sign_request, FelgensError, FelgensResult};
@@ -85,6 +88,26 @@ async fn decode_api<T: serde::de::DeserializeOwned>(
     what: &'static str,
 ) -> FelgensResult<T> {
     resp.json::<ApiEnvelope<T>>().await?.into_data(what)
+}
+
+/// Reply of the `msg/send` endpoint: `code == 0` means the danmaku was sent.
+///
+/// A successful reply carries both `message` and `msg` (empty strings), so they
+/// are read as separate fields. Aliasing one onto the other makes serde fail
+/// with a "duplicate field" error.
+#[derive(Debug, Deserialize)]
+struct SendDanmakuReply {
+    code: i64,
+    message: Option<String>,
+    msg: Option<String>,
+}
+
+/// Read a key from a cookie string like `a=1; b=2`.
+fn cookie_value<'a>(cookie: &'a str, key: &str) -> Option<&'a str> {
+    cookie.split(';').find_map(|part| {
+        let (name, value) = part.split_once('=')?;
+        (name.trim() == key).then(|| value.trim())
+    })
 }
 
 impl HttpClient {
@@ -177,6 +200,57 @@ impl HttpClient {
         ))
     }
 
+    /// Send a danmaku (live chat message) over `msg/send`.
+    ///
+    /// The cookie must contain `bili_jct`, which is sent as both `csrf` and
+    /// `csrf_token`. The endpoint reports the result in `code`: anything non-zero
+    /// (`-101` not logged in, `-111` bad csrf, `1003212` too long, `10031` too
+    /// fast, ...) becomes a [`FelgensError::ApiError`].
+    pub async fn send_danmaku(&self, room_id: u64, msg: &str, cookie: &str) -> FelgensResult<()> {
+        let csrf = cookie_value(cookie, "bili_jct").ok_or(FelgensError::MissingCsrf)?;
+        let rnd = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let form = [
+            ("roomid", room_id.to_string()),
+            ("msg", msg.to_string()),
+            ("rnd", rnd.to_string()),
+            ("fontsize", "25".to_string()),
+            ("color", "16777215".to_string()),
+            ("mode", "1".to_string()),
+            ("bubble", "0".to_string()),
+            ("csrf", csrf.to_string()),
+            ("csrf_token", csrf.to_string()),
+        ];
+
+        let resp = self
+            .client
+            .post(self.api_live_base_url.join("msg/send")?)
+            .header(reqwest::header::COOKIE, cookie)
+            .form(&form)
+            .timeout(Duration::from_secs(30))
+            .send()
+            .await?
+            .error_for_status()?;
+
+        let reply: SendDanmakuReply = resp.json().await?;
+        if reply.code == 0 {
+            return Ok(());
+        }
+
+        Err(FelgensError::ApiError {
+            what: "msg/send".to_string(),
+            code: reply.code,
+            message: [reply.message, reply.msg]
+                .into_iter()
+                .flatten()
+                .find(|text| !text.is_empty())
+                .unwrap_or_else(|| "failed to send danmaku".to_string()),
+        })
+    }
+
     pub async fn get_room_id(&self, room_id: u64) -> FelgensResult<u64> {
         if room_id > 1000 {
             return Ok(room_id);
@@ -242,5 +316,24 @@ mod tests {
         let envelope: ApiEnvelope<RoomInitData> = serde_json::from_str(raw).unwrap();
         let err = envelope.into_data("room_init").unwrap_err();
         assert!(err.to_string().contains("没有 data"));
+    }
+
+    #[test]
+    fn send_reply_accepts_message_and_msg_together() {
+        // The success reply carries both `message` and `msg`; aliasing them onto
+        // one field would fail with a "duplicate field" error.
+        let raw = r#"{"code":0,"message":"","msg":"","data":{}}"#;
+        let reply: SendDanmakuReply = serde_json::from_str(raw).unwrap();
+        assert_eq!(reply.code, 0);
+    }
+
+    #[test]
+    fn cookie_value_is_extracted() {
+        let cookie = "SESSDATA=abc%2Cdef; bili_jct=deadbeef; DedeUserID=42";
+        assert_eq!(cookie_value(cookie, "bili_jct"), Some("deadbeef"));
+        assert_eq!(cookie_value(cookie, "DedeUserID"), Some("42"));
+        assert_eq!(cookie_value(cookie, "nope"), None);
+        // Names must match exactly: bili_jct_x is not bili_jct.
+        assert_eq!(cookie_value("bili_jct_x=1", "bili_jct"), None);
     }
 }
