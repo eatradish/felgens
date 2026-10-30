@@ -31,6 +31,23 @@ Need raw JSON instead of parsed messages? Use `raw_stream` (see `examples/danmu_
 
 Or run `cargo run --example danmu`
 
+## Send a danmaku
+
+Sending goes over HTTP and only needs a logged-in cookie (`SESSDATA` + `bili_jct`);
+no WebSocket connection required.
+
+```rust
+use felgens::send_danmaku;
+
+#[tokio::main]
+async fn main() {
+    let cookie = std::env::var("FELGENS_COOKIE").unwrap();
+    send_danmaku(22746343, &cookie, "hello").await.unwrap();
+}
+```
+
+Or run `cargo run --example send_danmaku -- <message>`
+
 ## To-do!
 
 - [x] 弹幕
